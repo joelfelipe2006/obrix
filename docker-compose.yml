@@ -1,0 +1,15 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: obrix-mysql
+    environment:
+      MYSQL_DATABASE: obrix
+      MYSQL_USER: obrix
+      MYSQL_PASSWORD: obrix
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - obrix-db:/var/lib/mysql
+volumes:
+  obrix-db:

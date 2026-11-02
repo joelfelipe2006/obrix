@@ -1,0 +1,153 @@
+-- Obrix - esquema inicial
+-- Deriva do Diagrama de Classes (Secao 6) e dos requisitos da Secao 5.
+
+CREATE TABLE usuario (
+  id                        BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nome                      VARCHAR(120)  NOT NULL,
+  email                     VARCHAR(160)  NOT NULL UNIQUE,
+  telefone                  VARCHAR(20)   NOT NULL,
+  senha_hash                VARCHAR(100)  NOT NULL,
+  status                    VARCHAR(20)   NOT NULL,
+  email_verificado          BOOLEAN       NOT NULL DEFAULT FALSE,
+  data_cadastro             DATETIME      NOT NULL,
+  termos_versao             VARCHAR(10),
+  termos_aceitos_em         DATETIME,
+  tentativas_login          INT           NOT NULL DEFAULT 0,
+  bloqueado_ate             DATETIME,
+  data_solicitacao_exclusao DATETIME
+);
+
+CREATE TABLE cliente (
+  id          BIGINT PRIMARY KEY,
+  cep         VARCHAR(9),
+  logradouro  VARCHAR(160),
+  numero      VARCHAR(10),
+  bairro      VARCHAR(80),
+  cidade      VARCHAR(80),
+  estado      VARCHAR(2),
+  CONSTRAINT fk_cliente_usuario FOREIGN KEY (id) REFERENCES usuario (id)
+);
+
+CREATE TABLE prestador (
+  id                     BIGINT PRIMARY KEY,
+  cpf                    VARCHAR(14)  NOT NULL UNIQUE,
+  descricao_profissional VARCHAR(500),
+  nota_media             DECIMAL(3,2) NOT NULL DEFAULT 0.00,
+  CONSTRAINT fk_prestador_usuario FOREIGN KEY (id) REFERENCES usuario (id)
+);
+
+CREATE TABLE categoria_servico (
+  id        BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nome      VARCHAR(60)  NOT NULL UNIQUE,
+  descricao VARCHAR(200)
+);
+
+CREATE TABLE regiao_atuacao (
+  id     BIGINT AUTO_INCREMENT PRIMARY KEY,
+  cidade VARCHAR(80) NOT NULL,
+  bairro VARCHAR(80) NOT NULL,
+  CONSTRAINT uk_regiao UNIQUE (cidade, bairro)
+);
+
+CREATE TABLE prestador_categoria (
+  prestador_id BIGINT NOT NULL,
+  categoria_id BIGINT NOT NULL,
+  PRIMARY KEY (prestador_id, categoria_id),
+  CONSTRAINT fk_pc_prestador FOREIGN KEY (prestador_id) REFERENCES prestador (id),
+  CONSTRAINT fk_pc_categoria FOREIGN KEY (categoria_id) REFERENCES categoria_servico (id)
+);
+
+CREATE TABLE prestador_regiao (
+  prestador_id BIGINT NOT NULL,
+  regiao_id    BIGINT NOT NULL,
+  PRIMARY KEY (prestador_id, regiao_id),
+  CONSTRAINT fk_pr_prestador FOREIGN KEY (prestador_id) REFERENCES prestador (id),
+  CONSTRAINT fk_pr_regiao    FOREIGN KEY (regiao_id)    REFERENCES regiao_atuacao (id)
+);
+
+CREATE TABLE solicitacao (
+  id                       BIGINT AUTO_INCREMENT PRIMARY KEY,
+  cliente_id               BIGINT       NOT NULL,
+  prestador_id             BIGINT       NOT NULL,
+  categoria_id             BIGINT       NOT NULL,
+  regiao_id                BIGINT       NOT NULL,
+  descricao                VARCHAR(1000) NOT NULL,
+  data_desejada            DATE         NOT NULL,
+  data_criacao             DATETIME     NOT NULL,
+  status                   VARCHAR(30)  NOT NULL,
+  valor_final              DECIMAL(12,2),
+  motivo                   VARCHAR(500),
+  data_registro_conclusao  DATETIME,
+  confirmacao_automatica   BOOLEAN      NOT NULL DEFAULT FALSE,
+  versao                   BIGINT       NOT NULL DEFAULT 0,
+  exec_cep                 VARCHAR(9),
+  exec_logradouro          VARCHAR(160),
+  exec_numero              VARCHAR(10),
+  exec_bairro              VARCHAR(80),
+  exec_cidade              VARCHAR(80),
+  exec_estado              VARCHAR(2),
+  CONSTRAINT fk_sol_cliente   FOREIGN KEY (cliente_id)   REFERENCES cliente (id),
+  CONSTRAINT fk_sol_prestador FOREIGN KEY (prestador_id) REFERENCES prestador (id),
+  CONSTRAINT fk_sol_categoria FOREIGN KEY (categoria_id) REFERENCES categoria_servico (id),
+  CONSTRAINT fk_sol_regiao    FOREIGN KEY (regiao_id)    REFERENCES regiao_atuacao (id)
+);
+
+CREATE INDEX idx_sol_status    ON solicitacao (status);
+CREATE INDEX idx_sol_cliente   ON solicitacao (cliente_id);
+CREATE INDEX idx_sol_prestador ON solicitacao (prestador_id);
+
+CREATE TABLE historico_status (
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+  solicitacao_id  BIGINT      NOT NULL,
+  status_anterior VARCHAR(30),
+  status_novo     VARCHAR(30) NOT NULL,
+  data_hora       DATETIME    NOT NULL,
+  motivo          VARCHAR(500),
+  autor           VARCHAR(15) NOT NULL,
+  CONSTRAINT fk_hist_sol FOREIGN KEY (solicitacao_id) REFERENCES solicitacao (id)
+);
+
+CREATE INDEX idx_hist_sol ON historico_status (solicitacao_id);
+
+-- Uma solicitacao gera no maximo uma cobranca: a restricao de unicidade
+-- garante isso no banco, nao apenas no codigo.
+CREATE TABLE cobranca (
+  id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+  solicitacao_id      BIGINT        NOT NULL UNIQUE,
+  valor_servico       DECIMAL(12,2) NOT NULL,
+  percentual_comissao DECIMAL(5,2)  NOT NULL,
+  valor_comissao      DECIMAL(12,2) NOT NULL,
+  data_geracao        DATETIME      NOT NULL,
+  CONSTRAINT fk_cob_sol FOREIGN KEY (solicitacao_id) REFERENCES solicitacao (id)
+);
+
+CREATE TABLE avaliacao (
+  id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+  solicitacao_id BIGINT       NOT NULL UNIQUE,
+  nota           INT          NOT NULL,
+  comentario     VARCHAR(500),
+  data_hora      DATETIME     NOT NULL,
+  CONSTRAINT fk_ava_sol FOREIGN KEY (solicitacao_id) REFERENCES solicitacao (id)
+);
+
+CREATE TABLE notificacao (
+  id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id BIGINT       NOT NULL,
+  mensagem   VARCHAR(300) NOT NULL,
+  data_hora  DATETIME     NOT NULL,
+  lida       BOOLEAN      NOT NULL DEFAULT FALSE,
+  CONSTRAINT fk_not_usuario FOREIGN KEY (usuario_id) REFERENCES usuario (id)
+);
+
+CREATE INDEX idx_not_usuario ON notificacao (usuario_id);
+
+CREATE TABLE token_email (
+  id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id BIGINT       NOT NULL,
+  token_hash VARCHAR(100) NOT NULL,
+  tipo       VARCHAR(25)  NOT NULL,
+  criado_em  DATETIME     NOT NULL,
+  expira_em  DATETIME     NOT NULL,
+  usado_em   DATETIME,
+  CONSTRAINT fk_tok_usuario FOREIGN KEY (usuario_id) REFERENCES usuario (id)
+);
