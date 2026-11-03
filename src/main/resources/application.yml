@@ -6,7 +6,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    open-in-view: false
+    # O mapper monta a resposta no controller, fora do service: a sessao do
+    # Hibernate precisa continuar aberta ate o fim da requisicao.
+    open-in-view: true
     properties:
       hibernate.format_sql: false
   flyway:
