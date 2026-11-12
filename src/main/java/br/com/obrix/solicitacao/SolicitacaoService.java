@@ -225,6 +225,8 @@ public class SolicitacaoService {
         }
         Cobranca cobranca = new Cobranca(s, s.getValorFinal(), percentualComissao);
         cobrancas.save(cobranca);
+        // Lado inverso do 1:1: sem isto a resposta do proprio /confirmar sai sem a cobranca.
+        s.vincularCobranca(cobranca);
 
         notificacoes.criar(s.getPrestador(),
                 "Servico confirmado. Comissao de " + cobranca.getValorComissao() + " registrada.");
