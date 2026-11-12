@@ -41,8 +41,8 @@
 
   function carregar() {
     lista.innerHTML = '<p class="painel-apoio">Carregando...</p>';
-    return Api.minhasSolicitacoes().then(function (dados) {
-      solicitacoes = dados || [];
+    return Api.minhasSolicitacoes().then(function (pagina) {
+      solicitacoes = (pagina && pagina.itens) || [];
       desenhar();
     });
   }

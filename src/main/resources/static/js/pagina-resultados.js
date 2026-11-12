@@ -50,7 +50,9 @@
 
     lista.innerHTML = '<p class="painel-apoio">Carregando profissionais...</p>';
 
-    return Api.buscarPrestadores(filtro).then(function (prestadores) {
+    return Api.buscarPrestadores(filtro).then(function (pagina) {
+      var prestadores = (pagina && pagina.itens) || [];
+      var total = pagina ? pagina.total : prestadores.length;
       var nomeCategoria = (catalogo.categorias.filter(function (c) {
         return String(c.id) === String(filtro.categoriaId);
       })[0] || {}).nome || 'Profissionais';
@@ -59,8 +61,8 @@
       })[0] || {}).descricao : null;
 
       titulo.textContent = nomeCategoria;
-      resumo.textContent = prestadores.length +
-        (prestadores.length === 1 ? ' profissional encontrado' : ' profissionais encontrados') +
+      resumo.textContent = total +
+        (total === 1 ? ' profissional encontrado' : ' profissionais encontrados') +
         (nomeRegiao ? ' em ' + nomeRegiao : '');
 
       desenhar(prestadores);

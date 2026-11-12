@@ -1,7 +1,7 @@
 package br.com.obrix.usuario;
 
 import br.com.obrix.usuario.dto.Dtos.*;
-import org.springframework.data.domain.Page;
+import br.com.obrix.shared.Pagina;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,11 +17,12 @@ public class PrestadorController {
 
     /** RF08/RF09/RF10 — busca por categoria, filtro por regiao, ordenada por nota. */
     @GetMapping("/busca")
-    public Page<PrestadorResumoResponse> buscar(
+    public Pagina<PrestadorResumoResponse> buscar(
             @RequestParam Long categoriaId,
             @RequestParam(required = false) Long regiaoId,
             @RequestParam(defaultValue = "0") int pagina) {
-        return servico.buscar(categoriaId, regiaoId, PageRequest.of(pagina, TAMANHO_PAGINA));
+        return Pagina.de(servico.buscar(categoriaId, regiaoId,
+                PageRequest.of(Math.max(pagina, 0), TAMANHO_PAGINA)));
     }
 
     @GetMapping("/{id}/publico")

@@ -3,6 +3,7 @@ package br.com.obrix.solicitacao;
 import br.com.obrix.cobranca.CobrancaRepository;
 import br.com.obrix.seguranca.SessaoUsuario;
 import br.com.obrix.seguranca.UsuarioLogado;
+import br.com.obrix.shared.Pagina;
 import br.com.obrix.solicitacao.dto.SolicitacaoDtos.*;
 import br.com.obrix.usuario.Endereco;
 import br.com.obrix.usuario.dto.Dtos.EnderecoDto;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 /**
  * Acoes de estado como sub-recursos explicitos, e nao um PUT generico:
@@ -57,14 +57,14 @@ public class SolicitacaoController {
 
     /** Lista do painel: a origem depende do perfil de quem pediu. */
     @GetMapping
-    public List<SolicitacaoResponse> minhas(@RequestParam(defaultValue = "0") int pagina,
-                                            HttpServletRequest http) {
+    public Pagina<SolicitacaoResponse> minhas(@RequestParam(defaultValue = "0") int pagina,
+                                              HttpServletRequest http) {
         SessaoUsuario u = logado.atual(http);
-        var pageable = PageRequest.of(pagina, TAMANHO_PAGINA);
-        var pagina1 = "CLIENTE".equals(u.perfil())
+        var pageable = PageRequest.of(Math.max(pagina, 0), TAMANHO_PAGINA);
+        var page = "CLIENTE".equals(u.perfil())
                 ? servico.doCliente(u.id(), pageable)
                 : servico.doPrestador(u.id(), pageable);
-        return pagina1.getContent().stream().map(s -> mapper.paraResposta(s, u.id())).toList();
+        return Pagina.de(page, s -> mapper.paraResposta(s, u.id()));
     }
 
     @GetMapping("/{id}")
@@ -146,17 +146,15 @@ public class SolicitacaoController {
     public ExtratoResponse extrato(@RequestParam(defaultValue = "0") int pagina,
                                    HttpServletRequest http) {
         Long prestadorId = logado.idPrestador(http);
-        var page = cobrancas.doPrestador(prestadorId, PageRequest.of(pagina, TAMANHO_PAGINA));
+        var page = cobrancas.doPrestador(prestadorId, PageRequest.of(Math.max(pagina, 0), TAMANHO_PAGINA));
 
-        List<ItemExtrato> itens = page.getContent().stream()
-                .map(c -> new ItemExtrato(
-                        c.getSolicitacao().getId(),
-                        c.getSolicitacao().getCategoria().getNome(),
-                        c.getSolicitacao().getCliente().getNome(),
-                        c.getDataGeracao().toLocalDate().format(DATA),
-                        c.getValorServico(),
-                        c.getValorComissao()))
-                .toList();
+        Pagina<ItemExtrato> itens = Pagina.de(page, c -> new ItemExtrato(
+                c.getSolicitacao().getId(),
+                c.getSolicitacao().getCategoria().getNome(),
+                c.getSolicitacao().getCliente().getNome(),
+                c.getDataGeracao().toLocalDate().format(DATA),
+                c.getValorServico(),
+                c.getValorComissao()));
 
         // Totais de todas as cobrancas do prestador, nao so da pagina atual.
         BigDecimal totalComissao = cobrancas.totalComissaoDoPrestador(prestadorId);

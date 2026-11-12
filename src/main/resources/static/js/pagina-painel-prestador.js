@@ -39,8 +39,8 @@
   function carregar() {
     lista.innerHTML = '<p class="painel-apoio">Carregando...</p>';
     return Promise.all([Api.minhasSolicitacoes(), Api.extrato()]).then(function (r) {
-      solicitacoes = r[0] || [];
-      extrato = r[1] || { itens: [], totalComissao: 0, totalServicos: 0 };
+      solicitacoes = (r[0] && r[0].itens) || [];
+      extrato = r[1] || { pagina: { itens: [] }, totalComissao: 0, totalServicos: 0 };
       desenharIndicadores();
       desenhar();
     });
@@ -159,7 +159,7 @@
   /* ---------------------------------------------------------- extrato */
 
   function desenharExtrato() {
-    if (!extrato.itens.length) {
+    if (!extrato.pagina.itens.length) {
       lista.innerHTML = '<div class="vazio">Nenhuma cobranca ainda. ' +
         'Toda linha deste extrato corresponde a um servico que o cliente confirmou como concluido.</div>';
       return;
@@ -177,7 +177,7 @@
           '<th style="text-align:right">Comissao (10%)</th>' +
         '</tr></thead>' +
         '<tbody>' +
-          extrato.itens.map(function (i) {
+          extrato.pagina.itens.map(function (i) {
             return '<tr>' +
               '<td>' + UI.escapar(i.servico) + '</td>' +
               '<td>' + UI.escapar(i.cliente) + '</td>' +

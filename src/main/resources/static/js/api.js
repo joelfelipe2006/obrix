@@ -106,6 +106,15 @@
 
   function emDemonstracao() { return modo === 'demonstracao'; }
 
+  /**
+   * A demonstracao devolve listas soltas; aqui elas ganham o mesmo formato de
+   * pagina da API ({ itens, pagina, tamanho, total, temMais }), numa pagina so.
+   */
+  function paginaUnica(itens) {
+    itens = itens || [];
+    return { itens: itens, pagina: 0, tamanho: itens.length, total: itens.length, temMais: false };
+  }
+
   /** Executa a versao de demonstracao dentro de uma Promise, para a assinatura nao mudar. */
   function demo(fn) {
     try { return Promise.resolve(fn()); }
@@ -158,13 +167,14 @@
       return requisitar('/catalogo');
     },
 
+    /** Devolve uma pagina: { itens, pagina, tamanho, total, temMais }. */
     buscarPrestadores: function (filtro) {
-      if (emDemonstracao()) return demo(function () { return global.ObrixDemo.buscarPrestadores(filtro); });
+      if (emDemonstracao()) {
+        return demo(function () { return paginaUnica(global.ObrixDemo.buscarPrestadores(filtro)); });
+      }
       var q = '?categoriaId=' + encodeURIComponent(filtro.categoriaId);
       if (filtro.regiaoId) q += '&regiaoId=' + encodeURIComponent(filtro.regiaoId);
-      return requisitar('/prestadores/busca' + q).then(function (pagina) {
-        return (pagina && pagina.content) || [];
-      });
+      return requisitar('/prestadores/busca' + q);
     },
 
     perfilPublico: function (id) {
@@ -177,8 +187,11 @@
       return requisitar('/solicitacoes', { method: 'POST', corpo: dados });
     },
 
+    /** Devolve uma pagina: { itens, pagina, tamanho, total, temMais }. */
     minhasSolicitacoes: function () {
-      if (emDemonstracao()) return demo(function () { return global.ObrixDemo.minhasSolicitacoes(); });
+      if (emDemonstracao()) {
+        return demo(function () { return paginaUnica(global.ObrixDemo.minhasSolicitacoes()); });
+      }
       return requisitar('/solicitacoes');
     },
 
@@ -197,8 +210,15 @@
                         { method: 'POST', corpo: corpo || {} });
     },
 
+    /** Devolve { pagina: { itens, ... }, totalComissao, totalServicos }. */
     extrato: function () {
-      if (emDemonstracao()) return demo(function () { return global.ObrixDemo.extrato(); });
+      if (emDemonstracao()) {
+        return demo(function () {
+          var e = global.ObrixDemo.extrato();
+          return { pagina: paginaUnica(e.itens), totalComissao: e.totalComissao,
+                   totalServicos: e.totalServicos };
+        });
+      }
       return requisitar('/solicitacoes/extrato');
     },
 

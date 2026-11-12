@@ -118,12 +118,12 @@ class CicloApiTest extends ApiTestBase {
             // Extrato do prestador
             mvc.perform(get("/api/v1/solicitacoes/extrato").session(p.prestador))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.itens", hasSize(1)))
-                    .andExpect(jsonPath("$.itens[0].solicitacaoId").value(id))
-                    .andExpect(jsonPath("$.itens[0].servico").value("Eletrica"))
-                    .andExpect(jsonPath("$.itens[0].cliente").isString())
-                    .andExpect(jsonPath("$.itens[0].data").isString())
-                    .andExpect(jsonPath("$.itens[0].valorComissao").value(28.0))
+                    .andExpect(jsonPath("$.pagina.itens", hasSize(1)))
+                    .andExpect(jsonPath("$.pagina.itens[0].solicitacaoId").value(id))
+                    .andExpect(jsonPath("$.pagina.itens[0].servico").value("Eletrica"))
+                    .andExpect(jsonPath("$.pagina.itens[0].cliente").isString())
+                    .andExpect(jsonPath("$.pagina.itens[0].data").isString())
+                    .andExpect(jsonPath("$.pagina.itens[0].valorComissao").value(28.0))
                     .andExpect(jsonPath("$.totalComissao").value(28.0))
                     .andExpect(jsonPath("$.totalServicos").value(280.0));
         }
@@ -136,10 +136,10 @@ class CicloApiTest extends ApiTestBase {
 
             mvc.perform(get("/api/v1/solicitacoes").session(p.cliente))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[*].id", contains(id.intValue())));
+                    .andExpect(jsonPath("$.itens[*].id", contains(id.intValue())));
             mvc.perform(get("/api/v1/solicitacoes").session(p.prestador))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[*].id", contains(id.intValue())));
+                    .andExpect(jsonPath("$.itens[*].id", contains(id.intValue())));
         }
 
         @Test

@@ -186,7 +186,7 @@ class ContaApiTest extends ApiTestBase {
                     .andExpect(status().isNoContent());
 
             mvc.perform(get("/api/v1/prestadores/busca").param("categoriaId", categoria("Eletrica").toString()))
-                    .andExpect(jsonPath("$.content[*].id", not(hasItem(p.prestadorId.intValue()))));
+                    .andExpect(jsonPath("$.itens[*].id", not(hasItem(p.prestadorId.intValue()))));
 
             mvc.perform(post("/api/v1/solicitacoes").session(p.cliente)
                             .contentType(MediaType.APPLICATION_JSON)
@@ -211,7 +211,7 @@ class ContaApiTest extends ApiTestBase {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("ATIVA"));
             mvc.perform(get("/api/v1/prestadores/busca").param("categoriaId", categoria("Jardinagem").toString()))
-                    .andExpect(jsonPath("$.content[*].id", hasItem(id.intValue())));
+                    .andExpect(jsonPath("$.itens[*].id", hasItem(id.intValue())));
         }
 
         @Test

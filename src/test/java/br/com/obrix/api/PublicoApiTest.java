@@ -34,15 +34,15 @@ class PublicoApiTest extends ApiTestBase {
 
         mvc.perform(get("/api/v1/prestadores/busca").param("categoriaId", categoria("Marcenaria").toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[*].id", hasItem(id.intValue())))
-                .andExpect(jsonPath("$.content[0].nome").isString())
-                .andExpect(jsonPath("$.content[0].notaMedia").isNumber())
-                .andExpect(jsonPath("$.content[0].quantidadeAvaliacoes").isNumber())
-                .andExpect(jsonPath("$.content[0].categorias").isArray())
-                .andExpect(jsonPath("$.content[0].regioes").isArray())
-                .andExpect(jsonPath("$.content[0].telefone").doesNotExist())
-                .andExpect(jsonPath("$.content[0].email").doesNotExist())
-                .andExpect(jsonPath("$.content[0].cpf").doesNotExist());
+                .andExpect(jsonPath("$.itens[*].id", hasItem(id.intValue())))
+                .andExpect(jsonPath("$.itens[0].nome").isString())
+                .andExpect(jsonPath("$.itens[0].notaMedia").isNumber())
+                .andExpect(jsonPath("$.itens[0].quantidadeAvaliacoes").isNumber())
+                .andExpect(jsonPath("$.itens[0].categorias").isArray())
+                .andExpect(jsonPath("$.itens[0].regioes").isArray())
+                .andExpect(jsonPath("$.itens[0].telefone").doesNotExist())
+                .andExpect(jsonPath("$.itens[0].email").doesNotExist())
+                .andExpect(jsonPath("$.itens[0].cpf").doesNotExist());
     }
 
     @Test
@@ -57,8 +57,8 @@ class PublicoApiTest extends ApiTestBase {
                         .param("categoriaId", categoria("Refrigeracao").toString())
                         .param("regiaoId", regiao("Setor Marista").toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[*].id", hasItem(noMarista.intValue())))
-                .andExpect(jsonPath("$.content[*].id", not(hasItem(noOeste.intValue()))));
+                .andExpect(jsonPath("$.itens[*].id", hasItem(noMarista.intValue())))
+                .andExpect(jsonPath("$.itens[*].id", not(hasItem(noOeste.intValue()))));
     }
 
     @Test

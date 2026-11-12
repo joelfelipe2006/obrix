@@ -1,5 +1,6 @@
 package br.com.obrix.solicitacao.dto;
 
+import br.com.obrix.shared.Pagina;
 import br.com.obrix.usuario.dto.Dtos.EnderecoDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -66,8 +67,9 @@ public final class SolicitacaoDtos {
             List<HistoricoResponse> historico,
             List<String> acoesDisponiveis) { }
 
+    /** A pagina traz as linhas; os totais somam todas as cobrancas, nao so as da pagina. */
     public record ExtratoResponse(
-            List<ItemExtrato> itens,
+            Pagina<ItemExtrato> pagina,
             BigDecimal totalComissao,
             BigDecimal totalServicos) { }
 
