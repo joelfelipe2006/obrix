@@ -194,6 +194,12 @@ public class Solicitacao {
     }
 
     public void cancelar(String motivo, AutorTransicao autor) {
+        // Antes do aceite, o caminho do prestador e recusar: cancelar e para
+        // quem ja assumiu o servico. Assim a recusa fica registrada como recusa.
+        if (autor == AutorTransicao.PRESTADOR && status == StatusSolicitacao.SOLICITADA) {
+            throw new br.com.obrix.shared.RegraDeNegocioException("USE_RECUSAR",
+                    "Antes de aceitar, o profissional nao cancela: use Recusar.");
+        }
         exigirMotivo(motivo);
         mover(StatusSolicitacao.CANCELADA, motivo, autor);
     }

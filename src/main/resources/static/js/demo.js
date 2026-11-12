@@ -611,6 +611,10 @@
           break;
 
         case 'cancelar':
+          // Mesma regra do back-end: antes do aceite, o prestador recusa.
+          if (!ehCliente && s.status === 'SOLICITADA') {
+            throw erro('USE_RECUSAR', 'Antes de aceitar, o profissional nao cancela: use Recusar.');
+          }
           exigirMotivo(corpo.motivo);
           mover(s, 'CANCELADA', corpo.motivo, ehCliente ? 'CLIENTE' : 'PRESTADOR');
           break;
