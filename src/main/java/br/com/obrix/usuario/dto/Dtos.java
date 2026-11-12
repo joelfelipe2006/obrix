@@ -79,5 +79,9 @@ public final class Dtos {
 
     public record AlterarSenhaRequest(
             @NotBlank String senhaAtual,
-            @NotBlank @Size(min = 8) String novaSenha) { }
+            // Mesma forca exigida no cadastro.
+            @NotBlank @Size(min = 8, message = "A senha deve ter ao menos 8 caracteres")
+            @Pattern(regexp = ".*[A-Za-z].*", message = "A senha deve conter letras")
+            @Pattern(regexp = ".*\\d.*", message = "A senha deve conter numeros")
+            String novaSenha) { }
 }
