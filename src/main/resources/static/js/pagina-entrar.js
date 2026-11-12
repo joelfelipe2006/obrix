@@ -44,9 +44,27 @@
   }
 
   function irParaDestino(sessao) {
-    var destino = UI.parametro('destino');
+    var destino = destinoSeguro(UI.parametro('destino'));
     if (destino) { window.location.href = destino; return; }
     window.location.href = sessao.perfil === 'CLIENTE'
       ? 'painel-cliente.html' : 'painel-prestador.html';
+  }
+
+  /**
+   * O parametro "destino" vem da URL, entao qualquer um pode monta-lo. So vale
+   * um caminho relativo do proprio site: sem esquema (javascript:, http:...),
+   * sem "//" (outro dominio), sem barra inicial e sem barra invertida, que
+   * alguns navegadores tratam como "/". Qualquer outro valor e descartado.
+   */
+  function destinoSeguro(destino) {
+    if (!destino) return null;
+    var valor = String(destino).trim();
+    if (!valor) return null;
+    if (/^[a-z][a-z0-9+.\-]*:/i.test(valor)) return null;
+    if (valor.indexOf('//') !== -1) return null;
+    if (valor.indexOf('\\') !== -1) return null;
+    if (valor.charAt(0) === '/') return null;
+    if (/[\u0000-\u001f]/.test(valor)) return null;
+    return valor;
   }
 })();
