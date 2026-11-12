@@ -3,6 +3,7 @@ package br.com.obrix.usuario;
 import br.com.obrix.seguranca.UsuarioLogado;
 import br.com.obrix.usuario.dto.Dtos.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,6 +48,9 @@ public class ContaController {
     @PostMapping("/excluir")
     public ResponseEntity<Void> excluir(HttpServletRequest http) {
         servico.solicitarExclusao(logado.id(http));
+        // A conta deixa de autenticar na hora, nao so no proximo login.
+        HttpSession sessao = http.getSession(false);
+        if (sessao != null) sessao.invalidate();
         return ResponseEntity.noContent().build();
     }
 }
