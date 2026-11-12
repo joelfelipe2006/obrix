@@ -268,5 +268,26 @@ class ContaApiTest extends ApiTestBase {
             assertThat(c.get("logradouro")).as("logradouro depois da anonimizacao").isNotEqualTo("Rua 84");
             assertThat(c.get("cep")).as("CEP depois da anonimizacao").isNotEqualTo("74080-010");
         }
+
+        @Test
+        @DisplayName("anonimizacao apaga rua, numero e CEP das solicitacoes do cliente e mantem bairro e cidade")
+        void anonimizaEnderecoDasSolicitacoes() throws Exception {
+            Partes p = new Partes();
+            Long solicitacao = criarSolicitacao(p);
+            mvc.perform(post("/api/v1/conta/excluir").session(p.cliente)).andExpect(status().isNoContent());
+            jdbc.update("update usuario set data_solicitacao_exclusao = dateadd('DAY', -31, data_solicitacao_exclusao) where id = ?",
+                    p.clienteId);
+
+            tarefas.anonimizarContasEmExclusao();
+
+            Map<String, Object> e = jdbc.queryForMap(
+                    "select exec_cep, exec_logradouro, exec_numero, exec_bairro, exec_cidade from solicitacao where id = ?",
+                    solicitacao);
+            assertThat(e.get("exec_cep")).isNull();
+            assertThat(e.get("exec_logradouro")).isNull();
+            assertThat(e.get("exec_numero")).isNull();
+            assertThat(e.get("exec_bairro")).isEqualTo("Setor Sul");
+            assertThat(e.get("exec_cidade")).isEqualTo("Goiania");
+        }
     }
 }

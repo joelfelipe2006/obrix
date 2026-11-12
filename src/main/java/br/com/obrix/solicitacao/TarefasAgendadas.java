@@ -1,5 +1,6 @@
 package br.com.obrix.solicitacao;
 
+import br.com.obrix.usuario.Cliente;
 import br.com.obrix.usuario.StatusConta;
 import br.com.obrix.usuario.Usuario;
 import br.com.obrix.usuario.UsuarioRepository;
@@ -62,6 +63,9 @@ public class TarefasAgendadas {
         List<Usuario> alvos = usuarios
                 .findByStatusAndDataSolicitacaoExclusaoBefore(StatusConta.EM_EXCLUSAO, limite);
         alvos.forEach(Usuario::anonimizar);
+        alvos.stream()
+                .filter(u -> u instanceof Cliente)
+                .forEach(u -> solicitacoes.anonimizarEnderecoDoCliente(u.getId()));
         if (!alvos.isEmpty()) {
             log.info("Anonimizacao LGPD: {} contas anonimizadas.", alvos.size());
         }

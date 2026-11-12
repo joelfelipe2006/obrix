@@ -21,6 +21,13 @@ public class Cliente extends Usuario {
     @Override
     public String getPerfil() { return "CLIENTE"; }
 
+    /** Alem dos dados comuns, remove o endereco do cadastro. */
+    @Override
+    public void anonimizar() {
+        super.anonimizar();
+        this.endereco = null;
+    }
+
     public Endereco getEndereco() { return endereco; }
     public void setEndereco(Endereco endereco) { this.endereco = endereco; }
 }

@@ -56,6 +56,16 @@ public class Prestador extends Usuario {
     @Override
     public String getPerfil() { return "PRESTADOR"; }
 
+    /**
+     * Alem dos dados comuns, remove o CPF. A coluna e NOT NULL e UNIQUE, entao
+     * o CPF da lugar a um marcador unico que nao identifica ninguem.
+     */
+    @Override
+    public void anonimizar() {
+        super.anonimizar();
+        this.cpf = "ANON-" + getId();
+    }
+
     public void adicionarCategoria(CategoriaServico c) { categorias.add(c); }
     public void removerCategoria(CategoriaServico c)   { categorias.remove(c); }
     public void adicionarRegiao(RegiaoAtuacao r)       { regioes.add(r); }
