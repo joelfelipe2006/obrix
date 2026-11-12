@@ -21,7 +21,12 @@ public class AutenticacaoService {
         this.encoder = encoder;
     }
 
-    @Transactional
+    /**
+     * noRollbackFor: a falha de login sai como RegraDeNegocioException, e sem
+     * isto o rollback desfaria a contagem de tentativas — o bloqueio nunca
+     * chegaria a acontecer.
+     */
+    @Transactional(noRollbackFor = RegraDeNegocioException.class)
     public SessaoUsuario autenticar(String email, String senha) {
         Usuario usuario = usuarios.findByEmailIgnoreCase(email).orElse(null);
 
