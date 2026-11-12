@@ -197,16 +197,21 @@ class ContaApiTest extends ApiTestBase {
         }
 
         @Test
-        @DisplayName("conta desativada nao entra mais: 422 CONTA_INDISPONIVEL (e nao ha rota para reativar)")
-        void desativadaNaoEntra() throws Exception {
+        @DisplayName("entrar de novo reativa a conta desativada, e o prestador volta a aparecer na busca")
+        void desativadaReativaAoEntrar() throws Exception {
             String email = emailUnico("desativada");
-            cadastrarCliente(email);
+            // Categoria que nenhum outro teste usa: a busca pagina de 20 em 20 e o
+            // banco e compartilhado, entao em Eletrica ele poderia cair na pagina 2.
+            Long id = cadastrarPrestador(email, List.of(categoria("Jardinagem")), List.of(regiao("Setor Sul")));
             mvc.perform(post("/api/v1/conta/desativar").session(login(email))).andExpect(status().isNoContent());
 
-            mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
-                            .content(json.writeValueAsString(Map.of("email", email, "senha", SENHA))))
-                    .andExpect(status().isUnprocessableEntity())
-                    .andExpect(erroPadrao("CONTA_INDISPONIVEL"));
+            MockHttpSession nova = login(email);
+
+            mvc.perform(get("/api/v1/conta").session(nova))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("ATIVA"));
+            mvc.perform(get("/api/v1/prestadores/busca").param("categoriaId", categoria("Jardinagem").toString()))
+                    .andExpect(jsonPath("$.content[*].id", hasItem(id.intValue())));
         }
 
         @Test

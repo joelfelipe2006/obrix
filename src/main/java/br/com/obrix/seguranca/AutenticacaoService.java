@@ -1,6 +1,7 @@
 package br.com.obrix.seguranca;
 
 import br.com.obrix.shared.RegraDeNegocioException;
+import br.com.obrix.usuario.StatusConta;
 import br.com.obrix.usuario.Usuario;
 import br.com.obrix.usuario.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,6 +45,12 @@ public class AutenticacaoService {
             usuario.registrarFalhaDeLogin(LIMITE_TENTATIVAS, MINUTOS_BLOQUEIO);
             throw new RegraDeNegocioException("CREDENCIAIS_INVALIDAS",
                     "E-mail ou senha incorretos.");
+        }
+        // Desativar e uma pausa, nao um encerramento: entrar de novo reativa a
+        // conta e o prestador volta a aparecer na busca. Conta em exclusao nao
+        // passa por aqui e continua sem acesso.
+        if (usuario.getStatus() == StatusConta.DESATIVADA) {
+            usuario.reativarConta();
         }
         if (!usuario.podeOperar()) {
             throw new RegraDeNegocioException("CONTA_INDISPONIVEL",
