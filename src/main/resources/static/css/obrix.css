@@ -388,3 +388,11 @@ table.extrato tfoot td { font-weight: 700; color: var(--texto); background: var(
   padding: 9px 0; border-bottom: 1px solid #f3d9b5; text-align: center;
 }
 .faixa-demo strong { font-weight: 700; }
+
+/* Erro de conexao: a pagina foi servida pelo servidor, mas a API nao respondeu. */
+.faixa-erro {
+  background: var(--erro-fundo); color: var(--erro); font-size: 13.5px;
+  padding: 9px 0; border-bottom: 1px solid var(--erro); text-align: center;
+}
+.faixa-erro strong { font-weight: 700; }
+.faixa-erro .btn-texto { color: var(--erro); text-decoration: underline; margin-left: 6px; }

@@ -8,9 +8,11 @@
 
      servidor      — fetch para /api/v1, com a sessao no cookie. E o normal,
                      quando a pagina e servida pelo Spring Boot.
-     demonstracao  — resolve no navegador (js/demo.js). Entra em acao quando
-                     a pagina e aberta direto do disco ou quando a API nao
-                     responde, para que as telas possam ser vistas sem servidor.
+     demonstracao  — resolve no navegador (js/demo.js). Entra em acao SO quando
+                     a pagina e aberta direto do disco (file:), para que as
+                     telas possam ser vistas sem servidor. Servida pelo
+                     servidor, uma falha da API vira erro de conexao (codigo
+                     SEM_CONEXAO), nunca demonstracao.
 
    Isolar o acesso a dados tem um ganho pratico: trocar a origem nao toca em
    nenhuma tela.
@@ -32,6 +34,11 @@
     return e;
   }
 
+  function semConexao() {
+    return ErroApi('SEM_CONEXAO',
+      'Nao foi possivel conectar ao servidor. Verifique sua conexao e tente de novo.');
+  }
+
   function naoServidoPorHttp() {
     return global.location.protocol === 'file:';
   }
@@ -49,7 +56,10 @@
       config.body = JSON.stringify(opcoes.corpo);
     }
 
-    return fetch(BASE + caminho, config).then(function (resposta) {
+    return fetch(BASE + caminho, config)
+      // fetch so rejeita quando nem chega resposta: servidor fora do ar ou sem rede.
+      .catch(function () { throw semConexao(); })
+      .then(function (resposta) {
       if (resposta.status === 204) return null;
 
       return resposta.text().then(function (texto) {
@@ -84,17 +94,17 @@
       return Promise.resolve({ modo: modo, sessao: global.ObrixDemo.sessao() });
     }
 
+    // Servida pelo servidor, a pagina nunca cai na demonstracao: se a API
+    // falhar, o modo continua 'servidor' e a tela mostra o erro de conexao.
+    // Cair na demonstracao aqui faria o usuario agir sobre dados falsos.
+    modo = 'servidor';
+    avisarModo();
     return requisitar('/auth/sessao')
       .then(function (sessao) {
-        modo = 'servidor';
-        avisarModo();
         return { modo: modo, sessao: sessao };
       })
-      .catch(function () {
-        // API fora do ar: as telas continuam navegaveis com dados de demonstracao.
-        modo = 'demonstracao';
-        avisarModo();
-        return { modo: modo, sessao: global.ObrixDemo.sessao() };
+      .catch(function (e) {
+        throw (e && e.codigo === 'SEM_CONEXAO') ? e : semConexao();
       });
   }
 

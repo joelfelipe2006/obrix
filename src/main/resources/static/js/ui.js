@@ -83,6 +83,7 @@
   };
 
   UI.erro = function (e) {
+    if (e && e.jaExibido) return;
     var msg = (e && (e.mensagem || e.message)) || 'Ocorreu um erro inesperado.';
     if (e && e.campos && e.campos.length) msg += ' (' + e.campos.join('; ') + ')';
     UI.toast(msg, 'erro');
@@ -211,6 +212,21 @@
    * <p>Nao e um aviso de defeito: a mesma camada de API conversa com a API REST
    * quando ela esta disponivel, e resolve no navegador quando nao esta.</p>
    */
+  /** Erro de conexao com a API: fica visivel ate a pessoa tentar de novo. */
+  UI.montarFaixaSemConexao = function (mensagem) {
+    if (document.querySelector('.faixa-erro')) return;
+    var faixa = document.createElement('div');
+    faixa.className = 'faixa-erro';
+    faixa.setAttribute('role', 'alert');
+    faixa.innerHTML = '<div class="container"><strong>Sem conexao com o servidor.</strong> ' +
+      UI.escapar(mensagem || '') +
+      ' <button type="button" class="btn-texto" data-tentar-de-novo>Tentar de novo</button></div>';
+    faixa.querySelector('[data-tentar-de-novo]').addEventListener('click', function () {
+      global.location.reload();
+    });
+    document.body.insertBefore(faixa, document.body.firstChild);
+  };
+
   UI.montarFaixaDemo = function () {
     if (document.querySelector('.faixa-demo')) return;
     var faixa = document.createElement('div');
@@ -277,7 +293,15 @@
    */
   UI.iniciarPagina = function (opcoes) {
     opcoes = opcoes || {};
-    return global.Api.iniciar().then(function (inicio) {
+    return global.Api.iniciar().catch(function (e) {
+      // Sem conexao com a API: faixa fixa no topo, e a pagina para por aqui.
+      // A rejeicao segue adiante, mas marcada, para o UI.erro nao repetir a mensagem.
+      if (e && e.codigo === 'SEM_CONEXAO') {
+        UI.montarFaixaSemConexao(e.mensagem);
+        e.jaExibido = true;
+      }
+      throw e;
+    }).then(function (inicio) {
       if (inicio.modo === 'demonstracao') UI.montarFaixaDemo();
       UI.montarTopo(inicio.sessao);
 
