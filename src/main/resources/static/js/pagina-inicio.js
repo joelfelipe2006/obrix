@@ -22,6 +22,13 @@
     if (!catalogo) return;
     todasRegioes = catalogo.regioes || [];
 
+    // O percentual do texto de apresentacao vem do servidor, nao do HTML.
+    if (catalogo.percentualComissao !== undefined) {
+      document.querySelectorAll('[data-percentual-comissao]').forEach(function (el) {
+        el.textContent = UI.percentual(catalogo.percentualComissao);
+      });
+    }
+
     (catalogo.categorias || []).forEach(function (c) {
       selCategoria.appendChild(new Option(c.nome, c.id));
     });

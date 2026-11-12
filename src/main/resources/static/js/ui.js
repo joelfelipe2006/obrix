@@ -17,6 +17,18 @@
     return 'R$ ' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
+  /** 10 -> "10%", 12.5 -> "12,5%". */
+  UI.percentual = function (valor) {
+    var n = Number(valor);
+    var texto = (Math.round(n * 100) / 100).toString().replace('.', ',');
+    return texto + '%';
+  };
+
+  /** 1 -> "1 dia", 7 -> "7 dias". */
+  UI.dias = function (n) {
+    return n + (Number(n) === 1 ? ' dia' : ' dias');
+  };
+
   UI.iniciais = function (nome) {
     if (!nome) return '?';
     var partes = String(nome).trim().split(/\s+/);

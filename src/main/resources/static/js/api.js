@@ -125,6 +125,22 @@
     return { itens: itens, pagina: 0, tamanho: itens.length, total: itens.length, temMais: false };
   }
 
+  /**
+   * Comissao igual a do back-end (Cobranca.calcularComissao): valor x percentual
+   * / 100, duas casas, HALF_UP. A conta e feita em inteiros (centavos e
+   * centesimos de ponto percentual) para nao sofrer com o ponto flutuante.
+   * Exato enquanto valor em centavos x percentual em centesimos ficar abaixo
+   * de 2^53 (com 10%, valores ate R$ 90 bilhoes).
+   */
+  function calcularComissao(valor, percentual) {
+    var centavos = Math.round(Number(valor) * 100);
+    var centesimos = Math.round(Number(percentual) * 100);
+    var produto = centavos * centesimos;              // comissao em centavos x 10000
+    var sinal = produto < 0 ? -1 : 1;
+    var comissaoCentavos = Math.floor((Math.abs(produto) + 5000) / 10000) * sinal; // HALF_UP
+    return comissaoCentavos / 100;
+  }
+
   function parametroPagina(pagina) {
     return pagina ? '?pagina=' + encodeURIComponent(pagina) : '';
   }
@@ -180,6 +196,19 @@
       if (emDemonstracao()) return demo(function () { return global.ObrixDemo.catalogo(); });
       return requisitar('/catalogo');
     },
+
+    /**
+     * Regras que aparecem nos textos e na previa da comissao:
+     * { percentualComissao, prazoConfirmacaoDias }. Vem do /catalogo (ou da
+     * demonstracao, com os mesmos padroes do servidor).
+     */
+    regras: function () {
+      return Api.catalogo().then(function (c) {
+        return { percentualComissao: c.percentualComissao, prazoConfirmacaoDias: c.prazoConfirmacaoDias };
+      });
+    },
+
+    calcularComissao: calcularComissao,
 
     /** Devolve uma pagina: { itens, pagina, tamanho, total, temMais }. */
     buscarPrestadores: function (filtro) {

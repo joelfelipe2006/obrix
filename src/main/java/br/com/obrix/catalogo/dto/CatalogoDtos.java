@@ -1,5 +1,6 @@
 package br.com.obrix.catalogo.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public final class CatalogoDtos {
@@ -10,5 +11,12 @@ public final class CatalogoDtos {
 
     public record RegiaoResponse(Long id, String cidade, String bairro, String descricao) { }
 
-    public record CatalogoResponse(List<CategoriaResponse> categorias, List<RegiaoResponse> regioes) { }
+    /**
+     * Alem das listas, as regras que o front-end mostra nos textos e usa na
+     * previa da comissao: assim a tela nunca diverge da configuracao do servidor.
+     */
+    public record CatalogoResponse(List<CategoriaResponse> categorias,
+                                   List<RegiaoResponse> regioes,
+                                   BigDecimal percentualComissao,
+                                   int prazoConfirmacaoDias) { }
 }

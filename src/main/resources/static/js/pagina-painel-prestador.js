@@ -9,6 +9,8 @@
   // Paginacao: ultima pagina carregada de cada lista e se a API tem mais.
   var paginaSolicitacoes = 0, temMaisSolicitacoes = false;
   var itensExtrato = [], paginaExtrato = 0;
+  // Percentual e prazo vem do servidor (/catalogo), nunca escritos aqui.
+  var regras = null;
 
   var GRUPOS = {
     pendentes:  function (s) { return s.status === 'SOLICITADA'; },
@@ -41,7 +43,8 @@
 
   function carregar() {
     lista.innerHTML = '<p class="painel-apoio">Carregando...</p>';
-    return Promise.all([Api.minhasSolicitacoes(0), Api.extrato(0)]).then(function (r) {
+    return Promise.all([Api.minhasSolicitacoes(0), Api.extrato(0), regras || Api.regras()]).then(function (r) {
+      regras = r[2];
       var pagina = r[0] || { itens: [], temMais: false };
       solicitacoes = pagina.itens || [];
       paginaSolicitacoes = 0;
@@ -157,7 +160,8 @@
               (s.confirmacaoAutomatica ? ' — confirmacao automatica por prazo.' : '.') + '</p>'
             : '') +
           (s.status === 'EM_EXECUCAO'
-            ? '<p class="nota">Ao registrar a conclusao, o cliente tera 7 dias para confirmar. ' +
+            ? '<p class="nota">Ao registrar a conclusao, o cliente tera ' +
+              UI.dias(regras.prazoConfirmacaoDias) + ' para confirmar. ' +
               'A comissao so e gerada na confirmacao.</p>'
             : '') +
         '</div>' +
@@ -206,7 +210,7 @@
         '<thead><tr>' +
           '<th>Servico de origem</th><th>Cliente</th><th>Data</th>' +
           '<th style="text-align:right">Valor do servico</th>' +
-          '<th style="text-align:right">Comissao (10%)</th>' +
+          '<th style="text-align:right">Comissao (' + UI.percentual(regras.percentualComissao) + ')</th>' +
         '</tr></thead>' +
         '<tbody>' +
           itensExtrato.map(function (i) {
@@ -298,11 +302,13 @@
           '<label for="valor-final">Valor final acordado</label>' +
           '<input type="number" id="valor-final" min="0.01" step="0.01" ' +
             'value="' + (s.valorFinal || '') + '" placeholder="0,00">' +
-          '<span class="ajuda">E sobre este valor que a comissao de 10% sera calculada.</span>' +
+          '<span class="ajuda">E sobre este valor que a comissao de ' +
+            UI.percentual(regras.percentualComissao) + ' sera calculada.</span>' +
         '</div>' +
         '<div class="aviso aviso-alerta" style="display:block">' +
           '<strong>O que acontece agora</strong>' +
-          '<p style="margin-top:6px;font-size:14px">O cliente tera 7 dias para confirmar ou contestar. ' +
+          '<p style="margin-top:6px;font-size:14px">O cliente tera ' +
+            UI.dias(regras.prazoConfirmacaoDias) + ' para confirmar ou contestar. ' +
           'A cobranca da comissao so e gerada na confirmacao — e, se ele contestar, ' +
           'a confirmacao automatica deixa de valer para este servico.</p>' +
         '</div>',

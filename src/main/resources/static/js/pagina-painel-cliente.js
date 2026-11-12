@@ -9,6 +9,8 @@
   var lista, abas, filtroAtual = 'todas', solicitacoes = [];
   // Paginacao: ultima pagina carregada e se a API tem mais.
   var paginaAtual = 0, temMais = false;
+  // Percentual e prazo vem do servidor (/catalogo), nunca escritos aqui.
+  var regras = null;
 
   var GRUPOS = {
     todas:      function () { return true; },
@@ -43,7 +45,9 @@
 
   function carregar() {
     lista.innerHTML = '<p class="painel-apoio">Carregando...</p>';
-    return Api.minhasSolicitacoes(0).then(function (pagina) {
+    return Promise.all([Api.minhasSolicitacoes(0), regras || Api.regras()]).then(function (r) {
+      var pagina = r[0];
+      regras = r[1];
       solicitacoes = (pagina && pagina.itens) || [];
       paginaAtual = 0;
       temMais = !!(pagina && pagina.temMais);
@@ -123,7 +127,8 @@
           (s.status === 'CONCLUIDA' && s.cobranca
             ? '<p class="nota-contestada">Comissao de ' + UI.moeda(s.cobranca.valorComissao) +
               ' registrada ao profissional' +
-              (s.confirmacaoAutomatica ? ', por decurso do prazo de 7 dias.' : '.') + '</p>'
+              (s.confirmacaoAutomatica
+                ? ', por decurso do prazo de ' + UI.dias(regras.prazoConfirmacaoDias) + '.' : '.') + '</p>'
             : '') +
           (s.notaAvaliacao ? '<p class="nota-contestada">Voce avaliou com ' +
             s.notaAvaliacao + ' estrelas.</p>' : '') +
@@ -180,7 +185,9 @@
 
   /** A tela que define o produto. Tudo o que acontece ao confirmar fica visivel antes do clique. */
   function abrirConfirmacao(s) {
-    var comissao = Number(s.valorFinal) * 0.10;
+    // Previa com a mesma conta do back-end (centavos, HALF_UP): o valor mostrado
+    // aqui e exatamente o que a cobranca vai registrar.
+    var comissao = Api.calcularComissao(s.valorFinal, regras.percentualComissao);
 
     UI.abrirModal({
       titulo: 'Confirmar a conclusao do servico',
@@ -203,7 +210,8 @@
         '<h3 style="margin-top:16px">Ao confirmar</h3>' +
         '<ul class="lista-efeitos">' +
           '<li>O servico passa para o status Concluida e voce podera avaliar o profissional.</li>' +
-          '<li>A plataforma registra a comissao de 10% ao profissional: <strong>' +
+          '<li>A plataforma registra a comissao de ' + UI.percentual(regras.percentualComissao) +
+            ' ao profissional: <strong>' +
             UI.moeda(comissao) + '</strong>.</li>' +
         '</ul>' +
 
@@ -249,7 +257,8 @@
             '<li>O servico passa para o status Contestada.</li>' +
             '<li>Nenhuma cobranca e gerada ao profissional.</li>' +
             '<li>A confirmacao automatica deixa de valer para este servico — ' +
-              'contestar e protecao permanente, nao adiamento de sete dias.</li>' +
+              'contestar e protecao permanente, nao adiamento de ' +
+              UI.dias(regras.prazoConfirmacaoDias) + '.</li>' +
             '<li>Resolvida a divergencia, ele registra uma nova conclusao para voce confirmar.</li>' +
           '</ul>' +
         '</div>',

@@ -12,6 +12,7 @@
   'use strict';
 
   var CHAVE = 'obrix.demo.v1';
+  // Mesmos padroes do servidor: obrix.comissao.percentual e obrix.confirmacao.prazo-dias.
   var PERCENTUAL_COMISSAO = 10;
   var PRAZO_CONFIRMACAO_DIAS = 7;
 
@@ -223,7 +224,8 @@
       solicitacaoId: s.id,
       valorServico: s.valorFinal,
       percentualComissao: PERCENTUAL_COMISSAO,
-      valorComissao: Math.round(s.valorFinal * PERCENTUAL_COMISSAO) / 100,
+      // Mesma conta do back-end (centavos, HALF_UP), definida uma vez no api.js.
+      valorComissao: global.Api.calcularComissao(s.valorFinal, PERCENTUAL_COMISSAO),
       dataGeracao: dataHora(new Date())
     };
   }
@@ -442,7 +444,10 @@
         regioes: e.regioes.map(function (r) {
           return { id: r.id, cidade: r.cidade, bairro: r.bairro,
                    descricao: r.bairro + ' - ' + r.cidade };
-        })
+        }),
+        // Os mesmos padroes do servidor (application.yml), no mesmo formato do /catalogo.
+        percentualComissao: PERCENTUAL_COMISSAO,
+        prazoConfirmacaoDias: PRAZO_CONFIRMACAO_DIAS
       };
     },
 
