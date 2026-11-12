@@ -234,6 +234,9 @@ legend { padding: 0; font-weight: 600; font-size: 15px; margin-bottom: var(--e2)
   border: 1px dashed var(--linha-forte); border-radius: var(--raio); background: var(--superficie);
 }
 
+/* Fim de lista paginada: o botao so existe quando a API diz que ha mais itens. */
+.carregar-mais { display: flex; justify-content: center; margin-top: var(--e4); }
+
 /* --------------------------------------------------------------------------
    7. Selos de status
    Os oito valores do ciclo. O status nunca e comunicado so pela cor: o texto

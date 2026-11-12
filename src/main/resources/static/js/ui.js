@@ -97,6 +97,18 @@
    * Modal acessivel: fecha no Esc, devolve o foco ao elemento que o abriu e
    * nao deixa o fundo rolar enquanto esta aberto.
    */
+  /**
+   * Botao "Carregar mais" para o fim de uma lista paginada. So aparece quando
+   * a API disse que ha mais itens (temMais). A tela trata o clique pelo
+   * atributo data-carregar-mais.
+   */
+  UI.botaoCarregarMais = function (temMais) {
+    if (!temMais) return '';
+    return '<div class="carregar-mais">' +
+             '<button type="button" class="btn btn-secundario" data-carregar-mais>Carregar mais</button>' +
+           '</div>';
+  };
+
   UI.abrirModal = function (opcoes) {
     var anterior = document.activeElement;
 

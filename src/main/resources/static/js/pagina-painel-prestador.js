@@ -6,6 +6,9 @@
 
   var lista, abas, indicadores, filtroAtual = 'pendentes';
   var solicitacoes = [], extrato = null;
+  // Paginacao: ultima pagina carregada de cada lista e se a API tem mais.
+  var paginaSolicitacoes = 0, temMaisSolicitacoes = false;
+  var itensExtrato = [], paginaExtrato = 0;
 
   var GRUPOS = {
     pendentes:  function (s) { return s.status === 'SOLICITADA'; },
@@ -38,16 +41,44 @@
 
   function carregar() {
     lista.innerHTML = '<p class="painel-apoio">Carregando...</p>';
-    return Promise.all([Api.minhasSolicitacoes(), Api.extrato()]).then(function (r) {
-      solicitacoes = (r[0] && r[0].itens) || [];
-      extrato = r[1] || { pagina: { itens: [] }, totalComissao: 0, totalServicos: 0 };
+    return Promise.all([Api.minhasSolicitacoes(0), Api.extrato(0)]).then(function (r) {
+      var pagina = r[0] || { itens: [], temMais: false };
+      solicitacoes = pagina.itens || [];
+      paginaSolicitacoes = 0;
+      temMaisSolicitacoes = !!pagina.temMais;
+
+      extrato = r[1] || { pagina: { itens: [], total: 0, temMais: false }, totalComissao: 0, totalServicos: 0 };
+      itensExtrato = extrato.pagina.itens || [];
+      paginaExtrato = 0;
+
       desenharIndicadores();
       desenhar();
     });
   }
 
+  /** "Carregar mais": a proxima pagina da lista que esta na tela, somada ao que ja foi carregado. */
+  function carregarMais(botao) {
+    UI.ocupado(botao, true, 'Carregando...');
+    var pedido = filtroAtual === 'extrato'
+      ? Api.extrato(paginaExtrato + 1).then(function (e) {
+          paginaExtrato += 1;
+          itensExtrato = itensExtrato.concat(e.pagina.itens || []);
+          extrato.pagina = e.pagina;
+        })
+      : Api.minhasSolicitacoes(paginaSolicitacoes + 1).then(function (pagina) {
+          paginaSolicitacoes += 1;
+          solicitacoes = solicitacoes.concat(pagina.itens || []);
+          temMaisSolicitacoes = !!pagina.temMais;
+        });
+    pedido.then(desenhar).catch(function (e) { UI.ocupado(botao, false); UI.erro(e); });
+  }
+
   function desenharIndicadores() {
-    var concluidos = solicitacoes.filter(function (s) { return s.status === 'CONCLUIDA'; }).length;
+    // Cada cobranca e um servico confirmado: o total da pagina do extrato conta
+    // todos, inclusive os que ainda nao foram carregados na lista.
+    var concluidos = extrato.pagina.total !== undefined
+      ? extrato.pagina.total
+      : solicitacoes.filter(function (s) { return s.status === 'CONCLUIDA'; }).length;
     var notas = solicitacoes.filter(function (s) { return s.notaAvaliacao; })
                             .map(function (s) { return s.notaAvaliacao; });
     var media = notas.length
@@ -81,11 +112,12 @@
     if (filtroAtual === 'extrato') { desenharExtrato(); return; }
 
     var filtradas = solicitacoes.filter(GRUPOS[filtroAtual]);
+    var mais = UI.botaoCarregarMais(temMaisSolicitacoes);
     if (!filtradas.length) {
-      lista.innerHTML = '<div class="vazio">Nenhum servico neste filtro.</div>';
+      lista.innerHTML = '<div class="vazio">Nenhum servico neste filtro.</div>' + mais;
       return;
     }
-    lista.innerHTML = filtradas.map(cartao).join('');
+    lista.innerHTML = filtradas.map(cartao).join('') + mais;
   }
 
   function cartao(s) {
@@ -159,7 +191,7 @@
   /* ---------------------------------------------------------- extrato */
 
   function desenharExtrato() {
-    if (!extrato.pagina.itens.length) {
+    if (!itensExtrato.length) {
       lista.innerHTML = '<div class="vazio">Nenhuma cobranca ainda. ' +
         'Toda linha deste extrato corresponde a um servico que o cliente confirmou como concluido.</div>';
       return;
@@ -177,7 +209,7 @@
           '<th style="text-align:right">Comissao (10%)</th>' +
         '</tr></thead>' +
         '<tbody>' +
-          extrato.pagina.itens.map(function (i) {
+          itensExtrato.map(function (i) {
             return '<tr>' +
               '<td>' + UI.escapar(i.servico) + '</td>' +
               '<td>' + UI.escapar(i.cliente) + '</td>' +
@@ -192,12 +224,16 @@
           '<td class="valor">' + UI.moeda(extrato.totalServicos) + '</td>' +
           '<td class="valor">' + UI.moeda(extrato.totalComissao) + '</td>' +
         '</tr></tfoot>' +
-      '</table></div>';
+      '</table></div>' +
+      UI.botaoCarregarMais(extrato.pagina.temMais);
   }
 
   /* ------------------------------------------------------------ acoes */
 
   function aoClicar(ev) {
+    var mais = ev.target.closest('[data-carregar-mais]');
+    if (mais) { carregarMais(mais); return; }
+
     var botao = ev.target.closest('[data-acao]');
     if (!botao) return;
 

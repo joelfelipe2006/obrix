@@ -7,6 +7,8 @@
   'use strict';
 
   var lista, abas, filtroAtual = 'todas', solicitacoes = [];
+  // Paginacao: ultima pagina carregada e se a API tem mais.
+  var paginaAtual = 0, temMais = false;
 
   var GRUPOS = {
     todas:      function () { return true; },
@@ -41,25 +43,39 @@
 
   function carregar() {
     lista.innerHTML = '<p class="painel-apoio">Carregando...</p>';
-    return Api.minhasSolicitacoes().then(function (pagina) {
+    return Api.minhasSolicitacoes(0).then(function (pagina) {
       solicitacoes = (pagina && pagina.itens) || [];
+      paginaAtual = 0;
+      temMais = !!(pagina && pagina.temMais);
       desenhar();
     });
+  }
+
+  /** "Carregar mais": a proxima pagina, somada ao que ja esta na tela. */
+  function carregarMais(botao) {
+    UI.ocupado(botao, true, 'Carregando...');
+    Api.minhasSolicitacoes(paginaAtual + 1).then(function (pagina) {
+      paginaAtual += 1;
+      solicitacoes = solicitacoes.concat(pagina.itens || []);
+      temMais = !!pagina.temMais;
+      desenhar();
+    }).catch(function (e) { UI.ocupado(botao, false); UI.erro(e); });
   }
 
   function desenhar() {
     atualizarContadorDaAba();
 
     var filtradas = solicitacoes.filter(GRUPOS[filtroAtual]);
+    var mais = UI.botaoCarregarMais(temMais);
     if (!filtradas.length) {
       lista.innerHTML = '<div class="vazio">' +
         (solicitacoes.length
           ? 'Nenhuma solicitacao neste filtro.'
           : 'Voce ainda nao solicitou nenhum servico. <br><a href="index.html">Buscar um profissional</a>') +
-        '</div>';
+        '</div>' + mais;
       return;
     }
-    lista.innerHTML = filtradas.map(cartao).join('');
+    lista.innerHTML = filtradas.map(cartao).join('') + mais;
   }
 
   function atualizarContadorDaAba() {
@@ -144,6 +160,9 @@
   /* ------------------------------------------------------------- acoes */
 
   function aoClicar(ev) {
+    var mais = ev.target.closest('[data-carregar-mais]');
+    if (mais) { carregarMais(mais); return; }
+
     var botao = ev.target.closest('[data-acao]');
     if (!botao) return;
 

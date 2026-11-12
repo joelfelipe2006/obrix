@@ -115,6 +115,10 @@
     return { itens: itens, pagina: 0, tamanho: itens.length, total: itens.length, temMais: false };
   }
 
+  function parametroPagina(pagina) {
+    return pagina ? '?pagina=' + encodeURIComponent(pagina) : '';
+  }
+
   /** Executa a versao de demonstracao dentro de uma Promise, para a assinatura nao mudar. */
   function demo(fn) {
     try { return Promise.resolve(fn()); }
@@ -187,12 +191,17 @@
       return requisitar('/solicitacoes', { method: 'POST', corpo: dados });
     },
 
-    /** Devolve uma pagina: { itens, pagina, tamanho, total, temMais }. */
-    minhasSolicitacoes: function () {
+    /**
+     * Devolve uma pagina: { itens, pagina, tamanho, total, temMais }.
+     * @param {number} [pagina] comeca em 0
+     */
+    minhasSolicitacoes: function (pagina) {
       if (emDemonstracao()) {
-        return demo(function () { return paginaUnica(global.ObrixDemo.minhasSolicitacoes()); });
+        return demo(function () {
+          return pagina ? paginaUnica([]) : paginaUnica(global.ObrixDemo.minhasSolicitacoes());
+        });
       }
-      return requisitar('/solicitacoes');
+      return requisitar('/solicitacoes' + parametroPagina(pagina));
     },
 
     solicitacao: function (id) {
@@ -210,16 +219,19 @@
                         { method: 'POST', corpo: corpo || {} });
     },
 
-    /** Devolve { pagina: { itens, ... }, totalComissao, totalServicos }. */
-    extrato: function () {
+    /**
+     * Devolve { pagina: { itens, ... }, totalComissao, totalServicos }.
+     * @param {number} [pagina] comeca em 0
+     */
+    extrato: function (pagina) {
       if (emDemonstracao()) {
         return demo(function () {
           var e = global.ObrixDemo.extrato();
-          return { pagina: paginaUnica(e.itens), totalComissao: e.totalComissao,
+          return { pagina: paginaUnica(pagina ? [] : e.itens), totalComissao: e.totalComissao,
                    totalServicos: e.totalServicos };
         });
       }
-      return requisitar('/solicitacoes/extrato');
+      return requisitar('/solicitacoes/extrato' + parametroPagina(pagina));
     },
 
     conta: function () {
