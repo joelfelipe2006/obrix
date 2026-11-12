@@ -96,7 +96,11 @@
         classeConfirmar: 'btn-perigo',
         corpo: '<p>Seu perfil sai dos resultados de busca e voce para de receber solicitacoes. ' +
                'Voce continua podendo entrar e reativar quando quiser.</p>',
-        aoConfirmar: function () { UI.toast('Conta desativada.', 'ok'); }
+        aoConfirmar: function () {
+          Api.desativarConta()
+            .then(function () { UI.toast('Conta desativada.', 'ok'); })
+            .catch(UI.erro);
+        }
       });
     });
 
@@ -114,7 +118,15 @@
           '</ul>' +
           '<p style="margin-top:10px;font-size:13.5px;color:var(--texto-3)">' +
             'Apagar de verdade quebraria o historico da outra parte da transacao.</p>',
-        aoConfirmar: function () { UI.toast('Solicitacao de exclusao registrada.', 'ok'); }
+        aoConfirmar: function () {
+          Api.excluirConta()
+            .then(function () { return Api.sair(); })
+            .then(function () {
+              UI.toast('Solicitacao de exclusao registrada. Voce saiu da sua conta.', 'ok');
+              setTimeout(function () { window.location.href = 'index.html'; }, 1200);
+            })
+            .catch(UI.erro);
+        }
       });
     });
   }

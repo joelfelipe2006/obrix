@@ -212,6 +212,17 @@
       return requisitar('/conta', { method: 'PUT', corpo: dados });
     },
 
+    desativarConta: function () {
+      if (emDemonstracao()) return demo(function () { return null; });
+      return requisitar('/conta/desativar', { method: 'POST' });
+    },
+
+    /** O back-end encerra a sessao ao registrar a exclusao. */
+    excluirConta: function () {
+      if (emDemonstracao()) return demo(function () { return global.ObrixDemo.sair(); });
+      return requisitar('/conta/excluir', { method: 'POST' });
+    },
+
     reiniciarDemonstracao: function () {
       if (global.ObrixDemo) global.ObrixDemo.reiniciar();
     }
