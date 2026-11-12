@@ -158,12 +158,9 @@ public class SolicitacaoController {
                         c.getValorComissao()))
                 .toList();
 
-        BigDecimal totalComissao = itens.stream()
-                .map(ItemExtrato::valorComissao)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalServicos = itens.stream()
-                .map(ItemExtrato::valorServico)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Totais de todas as cobrancas do prestador, nao so da pagina atual.
+        BigDecimal totalComissao = cobrancas.totalComissaoDoPrestador(prestadorId);
+        BigDecimal totalServicos = cobrancas.totalServicosDoPrestador(prestadorId);
 
         return new ExtratoResponse(itens, totalComissao, totalServicos);
     }

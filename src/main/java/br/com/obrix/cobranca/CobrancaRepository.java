@@ -18,4 +18,7 @@ public interface CobrancaRepository extends JpaRepository<Cobranca, Long> {
 
     @Query("select coalesce(sum(c.valorComissao), 0) from Cobranca c where c.solicitacao.prestador.id = :prestadorId")
     BigDecimal totalComissaoDoPrestador(@Param("prestadorId") Long prestadorId);
+
+    @Query("select coalesce(sum(c.valorServico), 0) from Cobranca c where c.solicitacao.prestador.id = :prestadorId")
+    BigDecimal totalServicosDoPrestador(@Param("prestadorId") Long prestadorId);
 }
