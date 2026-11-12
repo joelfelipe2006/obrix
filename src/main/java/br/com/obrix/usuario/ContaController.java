@@ -38,9 +38,11 @@ public class ContaController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Desativar encerra a sessao; entrar de novo reativa a conta. */
     @PostMapping("/desativar")
     public ResponseEntity<Void> desativar(HttpServletRequest http) {
         servico.desativarConta(logado.id(http));
+        encerrarSessao(http);
         return ResponseEntity.noContent().build();
     }
 
@@ -49,8 +51,12 @@ public class ContaController {
     public ResponseEntity<Void> excluir(HttpServletRequest http) {
         servico.solicitarExclusao(logado.id(http));
         // A conta deixa de autenticar na hora, nao so no proximo login.
+        encerrarSessao(http);
+        return ResponseEntity.noContent().build();
+    }
+
+    private static void encerrarSessao(HttpServletRequest http) {
         HttpSession sessao = http.getSession(false);
         if (sessao != null) sessao.invalidate();
-        return ResponseEntity.noContent().build();
     }
 }

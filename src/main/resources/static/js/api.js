@@ -283,8 +283,9 @@
       return requisitar('/conta', { method: 'PUT', corpo: dados });
     },
 
+    /** O back-end encerra a sessao ao desativar; entrar de novo reativa a conta. */
     desativarConta: function () {
-      if (emDemonstracao()) return demo(function () { return null; });
+      if (emDemonstracao()) return demo(function () { return global.ObrixDemo.sair(); });
       return requisitar('/conta/desativar', { method: 'POST' });
     },
 

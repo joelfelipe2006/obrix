@@ -94,12 +94,17 @@
         titulo: 'Desativar conta',
         rotuloConfirmar: 'Desativar',
         classeConfirmar: 'btn-perigo',
-        corpo: '<p>Seu perfil sai dos resultados de busca e voce para de receber solicitacoes.</p>' +
+        corpo: '<p>Voce sai da conta agora. Seu perfil sai dos resultados de busca e voce ' +
+               'para de receber solicitacoes.</p>' +
                '<p style="margin-top:10px">Para reativar, basta entrar de novo com seu e-mail e senha: ' +
                'a conta volta a ficar ativa na hora e seu perfil reaparece na busca.</p>',
         aoConfirmar: function () {
+          // O servidor encerra a sessao ao desativar: a pessoa sai e volta ao inicio.
           Api.desativarConta()
-            .then(function () { UI.toast('Conta desativada.', 'ok'); })
+            .then(function () {
+              UI.toast('Conta desativada. Voce saiu; para reativar, basta entrar de novo.', 'ok');
+              setTimeout(function () { window.location.href = 'index.html'; }, 1500);
+            })
             .catch(UI.erro);
         }
       });
