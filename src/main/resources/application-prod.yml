@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${OBRIX_DB_URL:jdbc:mysql://localhost:3306/obrix?useSSL=false&serverTimezone=America/Sao_Paulo&characterEncoding=utf8}
+    url: ${OBRIX_DB_URL:jdbc:postgresql://localhost:5432/obrix}
     username: ${OBRIX_DB_USER:obrix}
     password: ${OBRIX_DB_PASSWORD:obrix}
 

@@ -1,15 +1,14 @@
 services:
   db:
-    image: mysql:8.0
-    container_name: obrix-mysql
+    image: postgres:17
+    container_name: obrix-postgres
     environment:
-      MYSQL_DATABASE: obrix
-      MYSQL_USER: obrix
-      MYSQL_PASSWORD: obrix
-      MYSQL_ROOT_PASSWORD: root
+      POSTGRES_DB: obrix
+      POSTGRES_USER: obrix
+      POSTGRES_PASSWORD: obrix
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - obrix-db:/var/lib/mysql
+      - obrix-db:/var/lib/postgresql/data
 volumes:
   obrix-db:
