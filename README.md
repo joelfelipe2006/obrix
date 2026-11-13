@@ -53,7 +53,7 @@ Com a aplicação rodando, o console do H2 fica em <http://localhost:8080/h2>.
 
 | Campo | Valor |
 |---|---|
-| JDBC URL | `jdbc:h2:mem:obrix;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE` |
+| JDBC URL | `jdbc:h2:mem:obrix;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE` |
 | User Name | `sa` |
 | Password | (vazio) |
 
@@ -70,7 +70,7 @@ Abra `src/main/resources/static/index.html` direto no navegador. A camada de API
 a ausência do back-end e passa a resolver tudo no próprio navegador, com os mesmos dados
 e as mesmas regras. Serve para ver as telas sem subir nada.
 
-### Com MySQL, como previsto para produção
+### Com PostgreSQL, como previsto para produção
 
 ```bash
 docker compose up -d db
@@ -257,4 +257,4 @@ Anotados aqui porque são reais, e não para serem descobertos depois:
 ## Stack
 
 Java 21 · Spring Boot 3.3 · Spring Data JPA · Flyway · H2 (desenvolvimento) ·
-MySQL 8 (produção) · HTML5, CSS3 e JavaScript sem framework · Maven
+PostgreSQL 17 (produção) · HTML5, CSS3 e JavaScript sem framework · Maven

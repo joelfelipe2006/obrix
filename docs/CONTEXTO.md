@@ -143,7 +143,7 @@ Monolito Spring Boot em camadas, organizado por funcionalidade. O front-end é e
 
 ```
 Navegador ── js/api.js ──HTTP/JSON──> Controller ──> Service ──> Repository (JPA) ──> Banco
-                                       (só HTTP)    (regra +      (Spring Data)     (H2 / MySQL)
+                                       (só HTTP)    (regra +      (Spring Data)     (H2 / Postgres)
                                                     transação)
 ```
 
@@ -156,7 +156,7 @@ Navegador ── js/api.js ──HTTP/JSON──> Controller ──> Service ─
 
 **Stack:** Java 21 · Spring Boot 3.3.5 · Spring Web · Spring Data JPA · Bean Validation ·
 `spring-security-crypto` (só o BCrypt, sem o Spring Security completo) · Flyway ·
-H2 (dev) · MySQL 8 (prod) · Maven · JUnit 5 + AssertJ.
+H2 (dev) · PostgreSQL 17 (prod) · Maven · JUnit 5 + AssertJ.
 
 **Autenticação:** sessão HTTP com cookie `HttpOnly` e `SameSite=Lax`, que expira em
 2 horas. O cookie é `Secure` apenas no perfil `prod`. O `AutenticacaoInterceptor` protege
@@ -234,7 +234,7 @@ src/main/java/br/com/obrix/
 src/main/resources/
 ├─ application.yml        comum (porta, sessão, comissão, prazo)
 ├─ application-dev.yml    H2 em memória + console /h2
-├─ application-prod.yml   MySQL por variável de ambiente, cookie Secure
+├─ application-prod.yml   PostgreSQL por variável de ambiente, cookie Secure
 ├─ db/migration/          V1__schema.sql, V2__seed_catalogo.sql
 └─ static/                front-end (html, css/obrix.css, js/)
 
@@ -286,7 +286,7 @@ anotação (`@NotBlank`, `@Size`, `@Email`, `@Pattern`, `@DecimalMin`…). A con
 **Banco versionado com Flyway.** `ddl-auto: validate`: o Hibernate só confere o esquema
 e não altera nada. Toda mudança de estrutura entra como uma nova migration
 `V{n}__descricao.sql` em `src/main/resources/db/migration`. **Uma migration já publicada
-nunca é editada.** O SQL precisa rodar em H2 (modo MySQL) e em MySQL 8.
+nunca é editada.** O SQL precisa rodar em H2 (modo PostgreSQL) e em PostgreSQL 17.
 
 **Regras no lugar certo.**
 - Transições e invariantes ficam na entidade (`Solicitacao.mover`, `exigirMotivo`).
@@ -326,10 +326,10 @@ mvn spring-boot:run
 | Prestador | `carlos@exemplo.com` | `obrix123` |
 
 - Console do H2: <http://localhost:8080/h2>
-  - JDBC URL: `jdbc:h2:mem:obrix;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE`
+  - JDBC URL: `jdbc:h2:mem:obrix;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE`
   - Usuário `sa`, senha vazia
 
-### Produção (perfil `prod`, MySQL)
+### Produção (perfil `prod`, PostgreSQL)
 
 ```bash
 docker compose up -d db
@@ -404,8 +404,8 @@ português descrevendo a regra.
 - Anonimização agendada das contas em exclusão (30 dias).
 - Notificações gravadas no banco a cada evento do ciclo.
 - Tratamento padronizado de erros e controle de concorrência otimista.
-- Perfis `dev` (H2 com dados de demonstração) e `prod` (MySQL), e `docker-compose` do
-  MySQL.
+- Perfis `dev` (H2 com dados de demonstração) e `prod` (PostgreSQL), e `docker-compose` do
+  PostgreSQL.
 
 **Front-end**
 - Telas: início, resultados da busca, perfil do prestador, solicitar, entrar, criar
@@ -426,7 +426,7 @@ português descrevendo a regra.
 |---|---|
 | **Saída para solicitação parada em `EM_EXECUCAO`** | `EM_EXECUCAO` só vai para `AGUARDANDO_CONFIRMACAO`. Se o prestador abandona o serviço, não há como sair. Proposta: permitir `CANCELADA` a partir de `EM_EXECUCAO`, com motivo, e testar. |
 | **Contestação sem desfecho** | Se o prestador não registra nova conclusão, a solicitação fica em `CONTESTADA` para sempre. Hoje o efeito é seguro (não cobra), mas falta definir uma saída, como cancelamento com motivo ou um prazo. |
-| **Testes de integração** | Não há teste com contexto Spring nem com banco. Faltam: services (cobrança criada só em `confirmar`, autorização por objeto, `COBRANCA_DUPLICADA`), controllers (códigos HTTP e formato do `ApiError`), constraint `UNIQUE` da cobrança no banco, tarefas agendadas e migrations rodando em MySQL. |
+| **Testes de integração** | Não há teste com contexto Spring nem com banco. Faltam: services (cobrança criada só em `confirmar`, autorização por objeto, `COBRANCA_DUPLICADA`), controllers (códigos HTTP e formato do `ApiError`), constraint `UNIQUE` da cobrança no banco, tarefas agendadas e migrations rodando em PostgreSQL. |
 | **Endpoint de notificações** | `NotificacaoService` já tem `doUsuario`, `naoLidas` e `marcarComoLida`, mas nenhum controller as expõe. As notificações são gravadas e o usuário não consegue vê-las. |
 | **Exportação dos dados pessoais (LGPD)** | Não existe endpoint de exportação. O README cita essa função, mas ela não está implementada. |
 | **Verificação de e-mail e recuperação de senha** | A entidade `TokenEmail` e a tabela `token_email` existem, mas nada as usa. Depende de configurar um provedor SMTP. |
