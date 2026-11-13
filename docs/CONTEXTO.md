@@ -216,7 +216,7 @@ As mudanças de estado são sub-recursos com nome (`/aceitar`, `/confirmar`…),
 src/main/java/br/com/obrix/
 ├─ ObrixApplication.java
 ├─ config/        SegurancaConfig (BCrypt), WebConfig (interceptor),
-│                 DadosDeDemonstracao (só no perfil dev)
+│                 DadosDeDemonstracao (perfis dev e demo, idempotente)
 ├─ shared/        ApiError, exceções de domínio, TratadorDeErros
 ├─ seguranca/     AuthController, AutenticacaoService, AutenticacaoInterceptor,
 │                 SessaoUsuario, UsuarioLogado

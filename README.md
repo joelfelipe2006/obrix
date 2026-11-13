@@ -77,6 +77,28 @@ docker compose up -d db
 mvn spring-boot:run -Dspring-boot.run.profiles=prod
 ```
 
+### Com o banco na nuvem (Neon)
+
+Defina as três variáveis de ambiente com os dados da sua instância (nunca as grave no
+repositório):
+
+```bash
+OBRIX_DB_URL=jdbc:postgresql://<host>/<banco>?sslmode=require
+OBRIX_DB_USER=<usuario>
+OBRIX_DB_PASSWORD=<senha>
+```
+
+E suba com os perfis `prod` e `demo`:
+
+```bash
+mvn spring-boot:run "-Dspring-boot.run.profiles=prod,demo"
+```
+
+O Flyway cria o esquema na primeira subida. O perfil `demo` insere os dados de
+demonstração só se `ana@exemplo.com` ainda não existir, então subir de novo não duplica
+nada. Com `prod` sozinho nenhum dado de exemplo é inserido. A primeira conexão pode levar
+alguns segundos enquanto o Neon "acorda".
+
 ### Testes
 
 ```bash
