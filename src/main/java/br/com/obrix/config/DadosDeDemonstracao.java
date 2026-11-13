@@ -5,7 +5,6 @@ import br.com.obrix.catalogo.CategoriaServicoRepository;
 import br.com.obrix.catalogo.RegiaoAtuacao;
 import br.com.obrix.catalogo.RegiaoAtuacaoRepository;
 import br.com.obrix.solicitacao.Solicitacao;
-import br.com.obrix.solicitacao.SolicitacaoRepository;
 import br.com.obrix.solicitacao.SolicitacaoService;
 import br.com.obrix.usuario.*;
 import org.slf4j.Logger;
@@ -15,24 +14,31 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Massa de demonstracao do perfil de desenvolvimento.
+ * Massa de demonstracao dos perfis dev e demo.
  *
  * <p>Reproduz os mesmos servicos dos mockups do documento, para que a aplicacao
  * suba com o painel ja populado e cada status do ciclo visivel.</p>
+ *
+ * <p>O perfil demo combina com prod para popular um banco persistente. Por isso a
+ * carga e idempotente (so roda se a cliente de exemplo ainda nao existe) e atomica:
+ * uma falha no meio desfaz tudo, em vez de deixar meia massa que bloquearia a
+ * proxima tentativa. O perfil prod sozinho nunca ativa esta classe.</p>
  */
 @Configuration
-@Profile("dev")
+@Profile({"dev", "demo"})
 public class DadosDeDemonstracao {
 
     private static final Logger log = LoggerFactory.getLogger(DadosDeDemonstracao.class);
     private static final String SENHA = "obrix123";
+    private static final String EMAIL_SENTINELA = "ana@exemplo.com";
 
     @Bean
     ApplicationRunner semear(UsuarioRepository usuarios,
@@ -40,20 +46,22 @@ public class DadosDeDemonstracao {
                              PrestadorRepository prestadores,
                              CategoriaServicoRepository categorias,
                              RegiaoAtuacaoRepository regioes,
-                             SolicitacaoRepository solicitacoes,
                              SolicitacaoService servico,
-                             PasswordEncoder encoder) {
-        return args -> popular(usuarios, clientes, prestadores, categorias,
-                regioes, solicitacoes, servico, encoder);
+                             PasswordEncoder encoder,
+                             PlatformTransactionManager transacoes) {
+        return args -> {
+            if (usuarios.existsByEmailIgnoreCase(EMAIL_SENTINELA)) {
+                log.info("Dados de demonstracao ja existem; nada foi inserido.");
+                return;
+            }
+            new TransactionTemplate(transacoes).executeWithoutResult(status ->
+                    popular(clientes, prestadores, categorias, regioes, servico, encoder));
+        };
     }
 
-    @Transactional
-    void popular(UsuarioRepository usuarios, ClienteRepository clientes,
-                 PrestadorRepository prestadores, CategoriaServicoRepository categorias,
-                 RegiaoAtuacaoRepository regioes, SolicitacaoRepository solicitacoes,
-                 SolicitacaoService servico, PasswordEncoder encoder) {
-
-        if (usuarios.count() > 0) return;
+    private void popular(ClienteRepository clientes, PrestadorRepository prestadores,
+                         CategoriaServicoRepository categorias, RegiaoAtuacaoRepository regioes,
+                         SolicitacaoService servico, PasswordEncoder encoder) {
 
         CategoriaServico eletrica   = categoria(categorias, "Eletrica");
         CategoriaServico hidraulica = categoria(categorias, "Hidraulica");
