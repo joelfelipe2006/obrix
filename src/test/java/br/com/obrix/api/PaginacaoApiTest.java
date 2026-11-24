@@ -3,7 +3,9 @@ package br.com.obrix.api;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -22,7 +24,7 @@ class PaginacaoApiTest extends ApiTestBase {
         Partes p = new Partes();
         for (int i = 0; i < 21; i++) {
             Long id = ateAguardandoConfirmacao(p, "100.00");
-            acao(p.cliente, id, "confirmar");
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("100.00")));
         }
 
         mvc.perform(get("/api/v1/solicitacoes").session(p.cliente))

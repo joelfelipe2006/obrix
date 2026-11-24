@@ -106,11 +106,16 @@ public class SolicitacaoController {
                 servico.registrarConclusao(id, prestadorId, req.valorFinal()), prestadorId);
     }
 
-    /** O unico clique do sistema que gera cobranca. */
+    /**
+     * O unico clique do sistema que pode gerar cobranca: so gera quando o valor
+     * pago informado pelo cliente bate com o registrado pelo prestador.
+     */
     @PostMapping("/{id}/confirmar")
-    public SolicitacaoResponse confirmar(@PathVariable Long id, HttpServletRequest http) {
+    public SolicitacaoResponse confirmar(@PathVariable Long id,
+                                         @Valid @RequestBody ConfirmacaoRequest req,
+                                         HttpServletRequest http) {
         Long clienteId = logado.idCliente(http);
-        return mapper.paraResposta(servico.confirmar(id, clienteId), clienteId);
+        return mapper.paraResposta(servico.confirmar(id, clienteId, req.valorPago()), clienteId);
     }
 
     @PostMapping("/{id}/contestar")

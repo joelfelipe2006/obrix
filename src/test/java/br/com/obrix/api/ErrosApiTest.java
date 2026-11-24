@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.*;
@@ -69,7 +70,7 @@ class ErrosApiTest extends ApiTestBase {
         void prestadorNaoConfirma() throws Exception {
             Partes p = new Partes();
             Long id = ateAguardandoConfirmacao(p, "100.00");
-            acao(p.prestador, id, "confirmar")
+            acao(p.prestador, id, "confirmar", Map.of("valorPago", new BigDecimal("100.00")))
                     .andExpect(status().isForbidden())
                     .andExpect(erroPadrao("NAO_AUTORIZADO"));
         }
@@ -95,7 +96,7 @@ class ErrosApiTest extends ApiTestBase {
             mvc.perform(get("/api/v1/solicitacoes/" + id).session(intruso.cliente))
                     .andExpect(status().isForbidden())
                     .andExpect(erroPadrao("NAO_AUTORIZADO"));
-            acao(intruso.cliente, id, "confirmar").andExpect(status().isForbidden());
+            acao(intruso.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("100.00"))).andExpect(status().isForbidden());
             acao(intruso.cliente, id, "contestar", motivo("x")).andExpect(status().isForbidden());
             acao(intruso.cliente, id, "cancelar", motivo("x")).andExpect(status().isForbidden());
             acao(intruso.cliente, id, "avaliar", Map.of("nota", 1, "comentario", ""))
@@ -124,7 +125,7 @@ class ErrosApiTest extends ApiTestBase {
         void confirmarSolicitada() throws Exception {
             Partes p = new Partes();
             Long id = criarSolicitacao(p);
-            acao(p.cliente, id, "confirmar")
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("100.00")))
                     .andExpect(status().isUnprocessableEntity())
                     .andExpect(erroPadrao("TRANSICAO_INVALIDA"))
                     .andExpect(jsonPath("$.mensagem", containsString("SOLICITADA")));
