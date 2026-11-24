@@ -207,7 +207,18 @@
             'Use "Contestar" e descreva a divergencia.</div>' +
         '</div>' +
 
-        '<h3 style="margin-top:16px">Ao confirmar</h3>' +
+        // Campo vazio de proposito: o cliente informa o que pagou, sem copiar o
+        // valor do profissional. E isso que fecha a brecha de subdeclaracao.
+        '<div class="campo" style="margin-top:16px">' +
+          '<label for="valor-pago">Quanto você pagou pelo serviço?</label>' +
+          '<input type="number" id="valor-pago" min="0.01" step="0.01" required ' +
+            'placeholder="0,00">' +
+          '<span class="ajuda">Informe o valor que você pagou. Se for diferente do valor ' +
+            'registrado pelo profissional, a conclusão volta para ele revisar e nenhuma ' +
+            'comissão é cobrada.</span>' +
+        '</div>' +
+
+        '<h3 style="margin-top:16px">Ao confirmar com o mesmo valor</h3>' +
         '<ul class="lista-efeitos">' +
           '<li>O servico passa para o status Concluida e voce podera avaliar o profissional.</li>' +
           '<li>A plataforma registra a comissao de ' + UI.percentual(regras.percentualComissao) +
@@ -226,8 +237,26 @@
           'Nenhuma das duas acoes envolve pagamento pela plataforma. ' +
           'O valor do servico e acertado direto com o profissional.</p>',
 
-      aoConfirmar: function () {
-        executar(s.id, 'confirmar', {}, 'Servico confirmado. Comissao registrada ao profissional.');
+      aoConfirmar: function (fundo) {
+        var campo = fundo.querySelector('#valor-pago');
+        var valorPago = Number(campo.value);
+        if (!campo.value || !(valorPago > 0)) {
+          UI.toast('Informe quanto voce pagou, com valor maior que zero.', 'erro');
+          campo.focus();
+          return false;
+        }
+        // O resultado depende do valor: igual conclui, diferente contesta.
+        Api.acao(s.id, 'confirmar', { valorPago: valorPago })
+          .then(function (r) {
+            if (r && r.status === 'CONTESTADA') {
+              UI.toast('O valor informado e diferente do registrado pelo profissional. ' +
+                       'A conclusao voltou para ele revisar e nenhuma comissao foi cobrada.', 'ok');
+            } else {
+              UI.toast('Servico confirmado. Comissao registrada ao profissional.', 'ok');
+            }
+            return carregar();
+          })
+          .catch(UI.erro);
       }
     });
   }
