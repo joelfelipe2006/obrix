@@ -141,6 +141,26 @@
     return comissaoCentavos / 100;
   }
 
+  /**
+   * Mesma comparacao do back-end (BigDecimal.compareTo): 280 e 280.00 sao
+   * iguais. Compara em centavos para nao depender do ponto flutuante.
+   */
+  function mesmoValor(a, b) {
+    return Math.round(Number(a) * 100) === Math.round(Number(b) * 100);
+  }
+
+  /** "R$ 1.500,50", no formato do motivo gravado pelo back-end. */
+  function reais(valor) {
+    return 'R$ ' + Number(valor).toFixed(2).replace('.', ',')
+      .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  /** Motivo da contestacao automatica, identico ao de Solicitacao.informarValorPago. */
+  function motivoDivergencia(valorPago, valorFinal) {
+    return 'Divergencia de valor: o cliente informou ' + reais(valorPago) +
+           ' e o profissional registrou ' + reais(valorFinal);
+  }
+
   function parametroPagina(pagina) {
     return pagina ? '?pagina=' + encodeURIComponent(pagina) : '';
   }
@@ -209,6 +229,8 @@
     },
 
     calcularComissao: calcularComissao,
+    mesmoValor: mesmoValor,
+    motivoDivergencia: motivoDivergencia,
 
     /** Devolve uma pagina: { itens, pagina, tamanho, total, temMais }. */
     buscarPrestadores: function (filtro) {
@@ -251,6 +273,8 @@
     /**
      * Transicao de estado. O nome da acao e o proprio sub-recurso no back-end:
      * POST /solicitacoes/{id}/confirmar, /contestar, /aceitar, e assim por diante.
+     * Confirmar exige { valorPago }: igual ao valor final conclui; diferente
+     * devolve a solicitacao CONTESTADA, sem cobranca.
      */
     acao: function (id, nome, corpo) {
       if (emDemonstracao()) return demo(function () { return global.ObrixDemo.acao(id, nome, corpo); });

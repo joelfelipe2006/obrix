@@ -29,6 +29,11 @@ public final class SolicitacaoDtos {
             @NotNull @DecimalMin(value = "0.01", message = "O valor deve ser maior que zero")
             BigDecimal valorFinal) { }
 
+    public record ConfirmacaoRequest(
+            @NotNull(message = "Informe o valor pago")
+            @DecimalMin(value = "0.01", message = "O valor deve ser maior que zero")
+            BigDecimal valorPago) { }
+
     public record AvaliarRequest(
             @Min(1) @Max(5) int nota,
             @Size(max = 500) String comentario) { }
@@ -53,6 +58,7 @@ public final class SolicitacaoDtos {
             String dataDesejada,
             String dataCriacao,
             BigDecimal valorFinal,
+            BigDecimal valorConfirmadoCliente,
             String motivo,
             String dataRegistroConclusao,
             String prazoConfirmacao,

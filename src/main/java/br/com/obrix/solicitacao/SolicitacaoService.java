@@ -169,15 +169,24 @@ public class SolicitacaoService {
     }
 
     /**
-     * RF18 + RF21. Unico ponto do sistema que cria cobranca.
+     * RF18 + RF21. O cliente confirma informando quanto pagou.
      *
-     * <p>A unicidade tambem e garantida por restricao no banco: um duplo clique
-     * ou um retry de rede nao pode gerar duas cobrancas.</p>
+     * <p>Quem paga a comissao e o prestador, entao o valor declarado por ele nao
+     * pode ser a unica fonte. Valor igual: segue para {@link #concluir}, o ponto
+     * unico que cria cobranca. Valor diferente: a solicitacao vira CONTESTADA,
+     * sem cobranca, e volta para o prestador revisar.</p>
      */
     @Transactional
-    public Solicitacao confirmar(Long id, Long clienteId) {
+    public Solicitacao confirmar(Long id, Long clienteId, BigDecimal valorPago) {
         Solicitacao s = carregarDoCliente(id, clienteId);
-        return concluir(s, false);
+        if (s.informarValorPago(valorPago)) {
+            return concluir(s, false);
+        }
+        notificacoes.criar(s.getPrestador(),
+                "O cliente informou um valor diferente do registrado. " + s.getMotivo()
+                        + ". Nenhuma cobranca foi gerada. Revise e registre a conclusao de novo.");
+        log.info("Solicitacao {} contestada por divergencia de valor.", s.getId());
+        return s;
     }
 
     @Transactional
@@ -216,6 +225,12 @@ public class SolicitacaoService {
         return concluir(s, true);
     }
 
+    /**
+     * Unico ponto do sistema que cria cobranca, sempre sobre o valorFinal.
+     *
+     * <p>A unicidade tambem e garantida por restricao no banco: um duplo clique
+     * ou um retry de rede nao pode gerar duas cobrancas.</p>
+     */
     private Solicitacao concluir(Solicitacao s, boolean automatica) {
         s.confirmar(automatica);
 

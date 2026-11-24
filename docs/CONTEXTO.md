@@ -31,7 +31,7 @@ residenciais, como eletricista, encanador, pintor, diarista e jardineiro.
 
 Buscar, receber solicitações e trocar contato não têm custo. A plataforma ganha uma
 comissão de 10% sobre o valor do serviço, cobrada do prestador, e só depois que o cliente
-confirma a conclusão.
+confirma a conclusão informando o valor que pagou.
 
 **Fora do escopo:** pagamento real (a cobrança é registrada, não movimenta dinheiro),
 aplicativo nativo, chat em tempo real, verificação de antecedentes e perfil
@@ -41,28 +41,43 @@ administrativo. O catálogo de categorias e regiões entra por migration.
 
 ## 2. A regra principal: comissão só na confirmação
 
-> A comissão de 10% só nasce quando o cliente confirma a conclusão do serviço.
+> A comissão de 10% só nasce quando o cliente confirma a conclusão do serviço, informando
+> um valor pago igual ao valor final registrado pelo prestador.
 
 Garantias que o código oferece:
 
 1. **Ponto único de criação.** `Cobranca` só é instanciada em
-   `SolicitacaoService.concluir`, chamado por `confirmar` (cliente) e por
+   `SolicitacaoService.concluir`, chamado por `confirmar` (cliente, com valor igual) e por
    `confirmarAutomaticamente` (prazo). Nenhum outro fluxo cria cobrança.
 2. **Registrar a conclusão não cobra.** O prestador informa que terminou e o valor final
    (`/concluir`), e a solicitação vai para `AGUARDANDO_CONFIRMACAO`, sem cobrança.
-3. **Confirmação automática.** Se o cliente não responde em 7 dias
+3. **O cliente confirma o valor (contra a subdeclaração).** Quem paga a comissão é o
+   prestador, então o valor declarado por ele não basta. `POST /confirmar` exige
+   `{"valorPago": ...}`, obrigatório e maior que zero (`ConfirmacaoRequest`; senão, 400
+   `DADOS_INVALIDOS`). `Solicitacao.informarValorPago` compara com `compareTo`, então 280
+   e 280.00 são iguais:
+   - **Igual:** grava `valor_confirmado_cliente` e segue para `concluir`, que gera a
+     cobrança sobre o `valorFinal`.
+   - **Diferente:** a solicitação vai para `CONTESTADA` pela transição normal, com autor
+     `CLIENTE` e motivo automático `Divergencia de valor: o cliente informou R$ X e o
+     profissional registrou R$ Y`. Nenhuma cobrança é gerada e o prestador é notificado.
+     Como toda contestação, desliga a confirmação automática; a saída é o prestador
+     registrar a conclusão de novo.
+   - Fora de `AGUARDANDO_CONFIRMACAO`, responde `TRANSICAO_INVALIDA`.
+4. **Confirmação automática.** Se o cliente não responde em 7 dias
    (`obrix.confirmacao.prazo-dias`), a tarefa agendada confirma. Fica gravado
-   `confirmacao_automatica = true` e o autor `SISTEMA` no histórico.
-4. **Contestar desliga o prazo de vez.** `isFoiContestada()` é calculado a partir do
+   `confirmacao_automatica = true` e o autor `SISTEMA` no histórico. A cobrança usa o
+   `valorFinal`, e `valor_confirmado_cliente` fica nulo.
+5. **Contestar desliga o prazo de vez.** `isFoiContestada()` é calculado a partir do
    histórico, sem coluna própria. Uma solicitação que já passou por `CONTESTADA` nunca
    mais é confirmada automaticamente.
-5. **No máximo uma cobrança por solicitação.** A verificação existe no serviço e também
+6. **No máximo uma cobrança por solicitação.** A verificação existe no serviço e também
    como `UNIQUE (solicitacao_id)` na tabela `cobranca`, o que cobre duplo clique e
    repetição de requisição.
-6. **O percentual fica gravado na cobrança.** `cobranca.percentual_comissao` guarda o
+7. **O percentual fica gravado na cobrança.** `cobranca.percentual_comissao` guarda o
    valor vigente no momento da geração. Se a política mudar, as cobranças antigas não se
    alteram.
-7. **Cálculo:** `valor × percentual ÷ 100`, em `BigDecimal`, escala 2, `HALF_UP`
+8. **Cálculo:** `valor × percentual ÷ 100`, em `BigDecimal`, escala 2, `HALF_UP`
    (`Cobranca.calcularComissao`). Exemplo de referência: 10% de R$ 280,00 = R$ 28,00.
 
 O percentual vem de `obrix.comissao.percentual` (`10.00`) em `application.yml`.
@@ -98,9 +113,10 @@ O mapa fica em `Solicitacao.TRANSICOES`. Qualquer outra transição lança
 | `ACEITA` | `EM_EXECUCAO` | `/iniciar` | Prestador | não |
 | `ACEITA` | `CANCELADA` | `/cancelar` | Cliente ou prestador | **sim** |
 | `EM_EXECUCAO` | `AGUARDANDO_CONFIRMACAO` | `/concluir` (com valor final) | Prestador | não |
-| `AGUARDANDO_CONFIRMACAO` | `CONCLUIDA` | `/confirmar` | Cliente | não |
+| `AGUARDANDO_CONFIRMACAO` | `CONCLUIDA` | `/confirmar` com `valorPago` **igual** ao valor final | Cliente | não |
 | `AGUARDANDO_CONFIRMACAO` | `CONCLUIDA` | tarefa agendada (7 dias) | Sistema | não |
 | `AGUARDANDO_CONFIRMACAO` | `CONTESTADA` | `/contestar` | Cliente | **sim** |
+| `AGUARDANDO_CONFIRMACAO` | `CONTESTADA` | `/confirmar` com `valorPago` **diferente** do valor final | Cliente | automático (divergência de valor) |
 | `CONTESTADA` | `AGUARDANDO_CONFIRMACAO` | `/concluir` (novo registro) | Prestador | não |
 
 ```
@@ -110,7 +126,8 @@ SOLICITADA ──aceitar──> ACEITA ──iniciar──> EM_EXECUCAO ──co
     └──cancelar─┐         └──cancelar──> CANCELADA                       ▼        │
                 └──────────────────────> CANCELADA                    CONTESTADA ─┘
 
-AGUARDANDO_CONFIRMACAO ──confirmar (cliente ou prazo)──> CONCLUIDA  ⇒  gera Cobranca
+AGUARDANDO_CONFIRMACAO ──confirmar (valor pago igual, ou prazo)──> CONCLUIDA  ⇒  gera Cobranca
+AGUARDANDO_CONFIRMACAO ──confirmar (valor pago diferente)──────> CONTESTADA  (sem cobrança)
 ```
 
 Observações:
@@ -156,7 +173,7 @@ Navegador ── js/api.js ──HTTP/JSON──> Controller ──> Service ─
 
 **Stack:** Java 21 · Spring Boot 3.3.5 · Spring Web · Spring Data JPA · Bean Validation ·
 `spring-security-crypto` (só o BCrypt, sem o Spring Security completo) · Flyway ·
-H2 (dev) · PostgreSQL 17 (prod) · Maven · JUnit 5 + AssertJ.
+H2 (dev) · PostgreSQL 18 (prod) · Maven · JUnit 5 + AssertJ.
 
 **Autenticação:** sessão HTTP com cookie `HttpOnly` e `SameSite=Lax`, que expira em
 2 horas. O cookie é `Secure` apenas no perfil `prod`. O `AutenticacaoInterceptor` protege
@@ -235,10 +252,15 @@ src/main/resources/
 ├─ application.yml        comum (porta, sessão, comissão, prazo)
 ├─ application-dev.yml    H2 em memória + console /h2
 ├─ application-prod.yml   PostgreSQL por variável de ambiente, cookie Secure
-├─ db/migration/          V1__schema.sql, V2__seed_catalogo.sql
+├─ db/migration/          V1__schema.sql, V2__seed_catalogo.sql,
+│                         V3__valor_confirmado_cliente.sql
 └─ static/                front-end (html, css/obrix.css, js/)
 
-src/test/java/br/com/obrix/solicitacao/CicloDaSolicitacaoTest.java
+src/test/java/br/com/obrix/
+├─ solicitacao/   testes de unidade da entidade (sem Spring)
+├─ api/           testes de integração da API (Spring + H2)
+└─ shared/        TratadorDeErrosTest
+src/test/js/      testes do front-end (node:test)
 ```
 
 Regra de organização: cada funcionalidade tem seu pacote, com entidade, repositório,
@@ -286,7 +308,7 @@ anotação (`@NotBlank`, `@Size`, `@Email`, `@Pattern`, `@DecimalMin`…). A con
 **Banco versionado com Flyway.** `ddl-auto: validate`: o Hibernate só confere o esquema
 e não altera nada. Toda mudança de estrutura entra como uma nova migration
 `V{n}__descricao.sql` em `src/main/resources/db/migration`. **Uma migration já publicada
-nunca é editada.** O SQL precisa rodar em H2 (modo PostgreSQL) e em PostgreSQL 17.
+nunca é editada.** O SQL precisa rodar em H2 (modo PostgreSQL) e em PostgreSQL 18.
 
 **Regras no lugar certo.**
 - Transições e invariantes ficam na entidade (`Solicitacao.mover`, `exigirMotivo`).
@@ -360,21 +382,42 @@ java -jar target/obrix-0.1.0.jar
 mvn test
 ```
 
-Hoje existe uma suíte, `CicloDaSolicitacaoTest`. São testes de unidade puros (JUnit 5 +
-AssertJ), sem contexto Spring e sem banco, que cobrem os dois pontos que geram obrigação
-financeira:
+```bash
+node --test src/test/js/*.test.js   # front-end, sem dependências
+```
 
-- **Máquina de estados:** caminho normal completo; histórico com autor e motivo;
-  transições proibidas; estado final imóvel; cancelamento só antes da execução; motivo
-  obrigatório; valor final positivo.
-- **Contestação:** a única saída é um novo registro de conclusão; o prazo automático fica
-  desligado para sempre; contestar não gera cobrança.
-- **Confirmação automática:** o prazo não vence antes de 7 dias; vence depois; autor
-  `SISTEMA`; a confirmação do cliente fica marcada como não automática; o relógio só corre
-  em `AGUARDANDO_CONFIRMACAO`.
-- **Contato:** liberado apenas após o aceite.
-- **Comissão:** caso de referência (R$ 280,00 → R$ 28,00), arredondamento `HALF_UP`,
-  escala 2, valores altos e percentual gravado na cobrança.
+São **152 testes no back-end** (JUnit 5 + AssertJ), entre unidade e integração, e
+**21 no front-end**. O `mvn test` também gera o relatório de cobertura do JaCoCo em
+`target/site/jacoco/index.html`.
+
+**Unidade** (`solicitacao/`, sem contexto Spring e sem banco):
+
+| Classe | Casos | O que cobre |
+|---|---|---|
+| `CicloDaSolicitacaoTest` | 25 | Máquina de estados (caminho normal, histórico com autor e motivo, transições proibidas, estado final imóvel, cancelamento, motivo obrigatório, valor positivo); contestação; confirmação automática e o prazo de 7 dias; contato só após o aceite; cálculo da comissão (R$ 280,00 → R$ 28,00, `HALF_UP`, escala 2, percentual gravado) |
+| `ConfirmacaoComValorTest` | 6 | `informarValorPago`: valor igual libera a confirmação; 280 = 280.00; valor diferente contesta com autor `CLIENTE` e motivo automático; o prazo automático deixa de correr; valor inválido e status errado |
+
+**Integração** (`api/`, `@SpringBootTest` + MockMvc + H2 com as migrations do Flyway;
+o login passa por `POST /auth/login` de verdade):
+
+| Classe | Casos | O que cobre |
+|---|---|---|
+| `CicloApiTest` | 24 | Ciclo completo pela API, cobrança gerada só na confirmação, cobrança única, avaliação, extrato e confirmação automática pela tarefa agendada |
+| `ConfirmacaoComValorApiTest` | 10 | Valor igual: `CONCLUIDA` com cobrança; 280 = 280.00; valor diferente: `CONTESTADA` sem cobrança, motivo no histórico e prestador notificado; revisão e nova confirmação; sem `valorPago` ou ≤ 0: 400; confirmação automática com `valorConfirmadoCliente` nulo |
+| `ErrosApiTest` | 35 | 401 sem login, 403 por perfil e por dono, 404, 422 `TRANSICAO_INVALIDA`, 400 de validação e o formato do `ApiError` |
+| `AutenticacaoApiTest` | 17 | Cadastro, login, sessão e bloqueio após tentativas erradas |
+| `ContaApiTest` | 16 | Minha conta: perfil, senha, desativar e excluir |
+| `PublicoApiTest` | 8 | Catálogo, busca e perfil público sem login |
+| `CancelamentoPeloPrestadorApiTest` | 3 | Prestador não cancela antes de aceitar (usa recusar) |
+| `PaginacaoApiTest` | 3 | Formato de página da busca, da lista e do extrato |
+| `RegrasNoCatalogoApiTest` | 2 | Comissão e prazo expostos no catálogo |
+| `DesativarEncerraSessaoApiTest` | 1 | Desativar a conta encerra a sessão |
+| `TratadorDeErrosTest` (`shared/`) | 2 | Conflitos de banco e de concorrência viram 409 |
+
+**Front-end** (`src/test/js`, `node:test`, sem dependências): os scripts reais de
+`static/js` rodam num contexto isolado do Node (`ambiente.js`), com `fetch` simulado.
+Cobrem a escolha entre API e demonstração, o formato de página, o "carregar mais", o
+cálculo da comissão, a conta e a regra do valor pago no `demo.js`.
 
 Para testar manualmente, suba em `dev`, entre como cliente e como prestador em
 navegadores diferentes (ou em janela anônima) e confira as tabelas `cobranca` e
@@ -397,6 +440,8 @@ português descrevendo a regra.
   disponível.
 - Máquina de estados completa, com os 8 status, histórico e autorização por objeto.
 - Geração da cobrança na confirmação, com unicidade garantida no banco.
+- Confirmação com o valor pago pelo cliente: valor diferente do registrado pelo prestador
+  vira contestação automática, sem cobrança (contra a subdeclaração).
 - Confirmação automática em 7 dias, desligada por contestação.
 - Avaliação após a conclusão, com recálculo da nota média.
 - Extrato de comissões do prestador.
@@ -414,7 +459,11 @@ português descrevendo a regra.
 - Botões de ação guiados por `acoesDisponiveis`.
 
 **Testes**
-- Testes de unidade da máquina de estados e do cálculo da comissão.
+- Testes de unidade da máquina de estados, do cálculo da comissão e da confirmação com
+  valor pago.
+- Testes de integração da API com Spring e H2 (ciclo, cobrança, erros, autenticação,
+  conta, busca pública, paginação).
+- Testes do front-end com `node:test`.
 
 ---
 
@@ -426,7 +475,7 @@ português descrevendo a regra.
 |---|---|
 | **Saída para solicitação parada em `EM_EXECUCAO`** | `EM_EXECUCAO` só vai para `AGUARDANDO_CONFIRMACAO`. Se o prestador abandona o serviço, não há como sair. Proposta: permitir `CANCELADA` a partir de `EM_EXECUCAO`, com motivo, e testar. |
 | **Contestação sem desfecho** | Se o prestador não registra nova conclusão, a solicitação fica em `CONTESTADA` para sempre. Hoje o efeito é seguro (não cobra), mas falta definir uma saída, como cancelamento com motivo ou um prazo. |
-| **Testes de integração** | Não há teste com contexto Spring nem com banco. Faltam: services (cobrança criada só em `confirmar`, autorização por objeto, `COBRANCA_DUPLICADA`), controllers (códigos HTTP e formato do `ApiError`), constraint `UNIQUE` da cobrança no banco, tarefas agendadas e migrations rodando em PostgreSQL. |
+| **Testes no PostgreSQL** | Os testes de integração rodam em H2 (modo PostgreSQL). Falta rodar as migrations e a constraint `UNIQUE` da cobrança contra um PostgreSQL real (por exemplo, com Testcontainers). |
 | **Endpoint de notificações** | `NotificacaoService` já tem `doUsuario`, `naoLidas` e `marcarComoLida`, mas nenhum controller as expõe. As notificações são gravadas e o usuário não consegue vê-las. |
 | **Exportação dos dados pessoais (LGPD)** | Não existe endpoint de exportação. O README cita essa função, mas ela não está implementada. |
 | **Verificação de e-mail e recuperação de senha** | A entidade `TokenEmail` e a tabela `token_email` existem, mas nada as usa. Depende de configurar um provedor SMTP. |

@@ -163,7 +163,7 @@
         dataDesejada: data(hoje(diasDesejados)),
         dataCriacao: dataHora(hoje(-1)),
         status: 'SOLICITADA',
-        valorFinal: null, motivo: null,
+        valorFinal: null, valorConfirmadoCliente: null, motivo: null,
         dataRegistroConclusao: null, confirmacaoAutomatica: false,
         enderecoExecucao: endereco,
         historico: [{ statusAnterior: null, statusNovo: 'SOLICITADA',
@@ -200,6 +200,7 @@
     tomadas.valorFinal = 150;
     tomadas.dataRegistroConclusao = dataHora(hoje(-8));
     mover(tomadas, 'AGUARDANDO_CONFIRMACAO', null, 'PRESTADOR');
+    tomadas.valorConfirmadoCliente = 150;
     mover(tomadas, 'CONCLUIDA', null, 'CLIENTE');
     estado.cobrancas.push(criarCobranca(estado, tomadas));
     estado.avaliacoes.push({ id: 1, solicitacaoId: tomadas.id, nota: 5,
@@ -315,6 +316,8 @@
       dataDesejada: s.dataDesejada,
       dataCriacao: s.dataCriacao,
       valorFinal: s.valorFinal,
+      // Estados salvos antes desta regra nao tem o campo.
+      valorConfirmadoCliente: s.valorConfirmadoCliente == null ? null : s.valorConfirmadoCliente,
       motivo: s.motivo,
       dataRegistroConclusao: s.dataRegistroConclusao,
       prazoConfirmacao: prazoConfirmacao(s),
@@ -527,7 +530,7 @@
         dataDesejada: dados.dataDesejada,
         dataCriacao: dataHora(new Date()),
         status: 'SOLICITADA',
-        valorFinal: null, motivo: null,
+        valorFinal: null, valorConfirmadoCliente: null, motivo: null,
         dataRegistroConclusao: null, confirmacaoAutomatica: false,
         enderecoExecucao: dados.enderecoExecucao,
         historico: [{ statusAnterior: null, statusNovo: 'SOLICITADA',
@@ -595,9 +598,24 @@
           mover(s, 'AGUARDANDO_CONFIRMACAO', null, 'PRESTADOR');
           break;
 
-        // O unico ponto que cria cobranca.
+        // O unico ponto que cria cobranca — e so quando o valor pago bate.
         case 'confirmar':
           exigirCliente(ehCliente);
+          if (corpo.valorPago === undefined || corpo.valorPago === null || corpo.valorPago === '') {
+            throw erro('DADOS_INVALIDOS', 'Informe o valor pago.');
+          }
+          if (!(Number(corpo.valorPago) > 0)) {
+            throw erro('DADOS_INVALIDOS', 'O valor deve ser maior que zero.');
+          }
+          if (s.status !== 'AGUARDANDO_CONFIRMACAO') {
+            throw erro('TRANSICAO_INVALIDA',
+                       'Nao e possivel passar de ' + ROTULOS[s.status] + ' para ' + ROTULOS.CONCLUIDA + '.');
+          }
+          if (!global.Api.mesmoValor(corpo.valorPago, s.valorFinal)) {
+            mover(s, 'CONTESTADA', global.Api.motivoDivergencia(corpo.valorPago, s.valorFinal), 'CLIENTE');
+            break;
+          }
+          s.valorConfirmadoCliente = Number(corpo.valorPago);
           mover(s, 'CONCLUIDA', null, 'CLIENTE');
           if (!e.cobrancas.some(function (c) { return c.solicitacaoId === s.id; })) {
             e.cobrancas.push(criarCobranca(e, s));

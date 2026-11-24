@@ -90,6 +90,14 @@ public class Solicitacao {
     @Column(name = "valor_final", precision = 12, scale = 2)
     private BigDecimal valorFinal;
 
+    /**
+     * Quanto o cliente diz ter pago. Quem paga a comissao e o prestador, entao o
+     * valor dele sozinho nao basta: a cobranca so nasce quando os dois batem.
+     * Fica nulo na confirmacao automatica, que usa o valorFinal.
+     */
+    @Column(name = "valor_confirmado_cliente", precision = 12, scale = 2)
+    private BigDecimal valorConfirmadoCliente;
+
     /** Motivo da transicao corrente. O historico guarda o de cada uma. */
     @Column(length = 500)
     private String motivo;
@@ -188,6 +196,39 @@ public class Solicitacao {
                 automatica ? AutorTransicao.SISTEMA : AutorTransicao.CLIENTE);
     }
 
+    /**
+     * O cliente informa quanto pagou. Se bate com o valor registrado pelo
+     * prestador, o valor fica gravado e devolve {@code true}: quem chama segue
+     * para a confirmacao. Se diverge, a solicitacao e contestada com motivo
+     * automatico e devolve {@code false} — sem confirmacao, sem cobranca.
+     *
+     * <p>A comparacao usa compareTo: 280 e 280.00 sao o mesmo valor.</p>
+     */
+    public boolean informarValorPago(BigDecimal valorPago) {
+        if (valorPago == null || valorPago.signum() <= 0) {
+            throw new br.com.obrix.shared.RegraDeNegocioException(
+                    "VALOR_INVALIDO", "O valor pago deve ser maior que zero.");
+        }
+        // Fora de AGUARDANDO_CONFIRMACAO nao ha o que confirmar: o erro fala da
+        // confirmacao pedida, nao da contestacao que uma divergencia geraria.
+        if (status != StatusSolicitacao.AGUARDANDO_CONFIRMACAO) {
+            throw new TransicaoInvalidaException(status, StatusSolicitacao.CONCLUIDA);
+        }
+        if (valorFinal.compareTo(valorPago) == 0) {
+            this.valorConfirmadoCliente = valorPago;
+            return true;
+        }
+        contestar("Divergencia de valor: o cliente informou " + reais(valorPago)
+                + " e o profissional registrou " + reais(valorFinal));
+        return false;
+    }
+
+    private static String reais(BigDecimal valor) {
+        var simbolos = java.text.DecimalFormatSymbols.getInstance(java.util.Locale.of("pt", "BR"));
+        var formato = new java.text.DecimalFormat("#,##0.00", simbolos);
+        return "R$ " + formato.format(valor.setScale(2, java.math.RoundingMode.HALF_UP));
+    }
+
     public void contestar(String motivo) {
         exigirMotivo(motivo);
         mover(StatusSolicitacao.CONTESTADA, motivo, AutorTransicao.CLIENTE);
@@ -274,6 +315,7 @@ public class Solicitacao {
     public LocalDateTime getDataCriacao() { return dataCriacao; }
     public StatusSolicitacao getStatus() { return status; }
     public BigDecimal getValorFinal() { return valorFinal; }
+    public BigDecimal getValorConfirmadoCliente() { return valorConfirmadoCliente; }
     public String getMotivo() { return motivo; }
     public LocalDateTime getDataRegistroConclusao() { return dataRegistroConclusao; }
     public boolean isConfirmacaoAutomatica() { return confirmacaoAutomatica; }

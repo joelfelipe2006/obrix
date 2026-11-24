@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
 
@@ -86,7 +87,7 @@ class CicloApiTest extends ApiTestBase {
                     .andExpect(jsonPath("$.acoesDisponiveis", containsInAnyOrder("confirmar", "contestar")));
 
             // Confirmar: unico ponto que gera cobranca
-            acao(p.cliente, id, "confirmar")
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("280.00")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("CONCLUIDA"))
                     .andExpect(jsonPath("$.confirmacaoAutomatica").value(false));
@@ -147,7 +148,7 @@ class CicloApiTest extends ApiTestBase {
         void arredondamento() throws Exception {
             Partes p = new Partes();
             Long id = ateAguardandoConfirmacao(p, "99.95");
-            acao(p.cliente, id, "confirmar").andExpect(status().isOk());
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("99.95"))).andExpect(status().isOk());
             mvc.perform(get("/api/v1/solicitacoes/" + id).session(p.cliente))
                     .andExpect(jsonPath("$.cobranca.valorComissao").value(10.0));
         }
@@ -157,7 +158,7 @@ class CicloApiTest extends ApiTestBase {
         void respostaDoConfirmarTrazCobranca() throws Exception {
             Partes p = new Partes();
             Long id = ateAguardandoConfirmacao(p, "280.00");
-            acao(p.cliente, id, "confirmar")
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("280.00")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.cobranca.valorComissao").value(28.0));
         }
@@ -253,7 +254,7 @@ class CicloApiTest extends ApiTestBase {
                     .andExpect(jsonPath("$.valorFinal").value(250.0))
                     .andExpect(jsonPath("$.prazoConfirmacao").value(nullValue()));
 
-            acao(p.cliente, id, "confirmar")
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("250.00")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("CONCLUIDA"));
             mvc.perform(get("/api/v1/solicitacoes/" + id).session(p.cliente))
@@ -281,8 +282,8 @@ class CicloApiTest extends ApiTestBase {
         void confirmarDuasVezes() throws Exception {
             Partes p = new Partes();
             Long id = ateAguardandoConfirmacao(p, "200.00");
-            acao(p.cliente, id, "confirmar").andExpect(status().isOk());
-            acao(p.cliente, id, "confirmar")
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("200.00"))).andExpect(status().isOk());
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("200.00")))
                     .andExpect(status().isUnprocessableEntity())
                     .andExpect(erroPadrao("TRANSICAO_INVALIDA"));
             assertThat(cobrancasDa(id)).isEqualTo(1);
@@ -308,7 +309,7 @@ class CicloApiTest extends ApiTestBase {
         void duplicada() throws Exception {
             Partes p = new Partes();
             Long id = ateAguardandoConfirmacao(p, "100.00");
-            acao(p.cliente, id, "confirmar");
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("100.00")));
             acao(p.cliente, id, "avaliar", Map.of("nota", 5, "comentario", "")).andExpect(status().isOk());
             acao(p.cliente, id, "avaliar", Map.of("nota", 1, "comentario", ""))
                     .andExpect(status().isUnprocessableEntity())
@@ -320,7 +321,7 @@ class CicloApiTest extends ApiTestBase {
         void notaInvalida() throws Exception {
             Partes p = new Partes();
             Long id = ateAguardandoConfirmacao(p, "100.00");
-            acao(p.cliente, id, "confirmar");
+            acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("100.00")));
             acao(p.cliente, id, "avaliar", Map.of("nota", 6, "comentario", ""))
                     .andExpect(status().isBadRequest())
                     .andExpect(erroPadrao("DADOS_INVALIDOS"));
@@ -446,7 +447,7 @@ class CicloApiTest extends ApiTestBase {
             Partes p = new Partes();
             for (int i = 0; i < 21; i++) {
                 Long id = ateAguardandoConfirmacao(p, "100.00");
-                acao(p.cliente, id, "confirmar").andExpect(status().isOk());
+                acao(p.cliente, id, "confirmar", Map.of("valorPago", new BigDecimal("100.00"))).andExpect(status().isOk());
             }
 
             mvc.perform(get("/api/v1/solicitacoes/extrato").session(p.prestador))

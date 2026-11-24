@@ -36,6 +36,7 @@ public class SolicitacaoMapper {
                 fmt(s.getDataDesejada()),
                 fmt(s.getDataCriacao()),
                 s.getValorFinal(),
+                s.getValorConfirmadoCliente(),
                 s.getMotivo(),
                 fmt(s.getDataRegistroConclusao()),
                 fmt(s.getPrazoConfirmacao(prazoDias)),

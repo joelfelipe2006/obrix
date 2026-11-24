@@ -126,7 +126,7 @@ public class DadosDeDemonstracao {
         servico.aceitar(tomadas.getId(), carlos.getId());
         servico.iniciarExecucao(tomadas.getId(), carlos.getId());
         servico.registrarConclusao(tomadas.getId(), carlos.getId(), new BigDecimal("150.00"));
-        servico.confirmar(tomadas.getId(), anaId);
+        servico.confirmar(tomadas.getId(), anaId, new BigDecimal("150.00"));
         servico.avaliar(tomadas.getId(), anaId, 5, "Pontual, explicou tudo e deixou limpo.");
 
         // 4. Solicitada — aguardando resposta do profissional.
