@@ -102,8 +102,44 @@ alguns segundos enquanto o Neon "acorda".
 ### Testes
 
 ```bash
-mvn test
+mvn clean test                      # back-end (JUnit 5) + relatório de cobertura
+node --test src/test/js/*.test.js   # front-end (node:test, sem dependências)
 ```
+
+A cobertura do back-end é medida com o JaCoCo, ligado ao `mvn test`. Depois de
+`mvn clean test`, abra `target/site/jacoco/index.html` no navegador para ver o
+relatório por pacote, classe e linha.
+
+Resultados medidos em 23/11/2026:
+
+| Suíte | Casos | Aprovados | Cobertura de linhas |
+|---|---|---|---|
+| Back-end (JUnit 5, `mvn clean test`) | 136 | 136 | 88,0% (843/958) |
+| Front-end (`node --test`) | 17 | 17 | não medida¹ |
+| **Total** | **153** | **153** | — |
+
+Cobertura do back-end por pacote (`br.com.obrix.*`):
+
+| Pacote | Instruções | Linhas | Ramos |
+|---|---|---|---|
+| `solicitacao` | 96,0% | 98,7% | 88,2% |
+| `cobranca` | 100,0% | 100,0% | — (sem desvios) |
+| `seguranca` | 96,6% | 98,4% | 83,3% |
+| `usuario` | 89,7% | 92,2% | 65,4% |
+| `shared` | 91,0% | 95,0% | — |
+| `catalogo` | 92,1% | 100,0% | 50,0% |
+| `avaliacao` | 83,3% | 87,5% | 50,0% |
+| `notificacao` | 54,1% | 59,1% | — |
+| `config` | 17,5% | 16,1% | 0,0% |
+| **Geral** | **85,2%** | **88,0%** | **78,1%** |
+
+O pacote `config` fica baixo porque `DadosDeDemonstracao` só roda nos perfis `dev` e
+`demo`, fora dos testes.
+
+¹ Os testes do front-end carregam os scripts de `static/js` num contexto isolado do
+Node (`vm`), e o coletor de cobertura do Node não acompanha código carregado dessa forma.
+
+Repositório: <https://github.com/joelfelipe2006/obrix>
 
 ---
 
