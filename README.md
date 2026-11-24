@@ -4,7 +4,7 @@ Plataforma web de intermediação entre clientes e prestadores autônomos de ser
 residenciais — eletricista, encanador, pintor, diarista, jardineiro.
 
 **O diferencial que define o sistema:** o profissional só paga comissão à plataforma
-quando o cliente confirma que o serviço foi concluído. Buscar, receber solicitações e
+quando o cliente confirma que o serviço foi concluído, informando quanto pagou. Buscar, receber solicitações e
 trocar contato não custam nada. Essa regra não é um slogan: ela é a razão da máquina de
 estados, da multiplicidade `0..1` entre solicitação e cobrança, e do ponto único do
 código que cria uma cobrança.
@@ -114,15 +114,15 @@ Resultados medidos em 23/11/2026:
 
 | Suíte | Casos | Aprovados | Cobertura de linhas |
 |---|---|---|---|
-| Back-end (JUnit 5, `mvn clean test`) | 136 | 136 | 88,0% (843/958) |
-| Front-end (`node --test`) | 17 | 17 | não medida¹ |
-| **Total** | **153** | **153** | — |
+| Back-end (JUnit 5, `mvn clean test`) | 152 | 152 | 88,3% (864/979) |
+| Front-end (`node --test`) | 21 | 21 | não medida¹ |
+| **Total** | **173** | **173** | — |
 
 Cobertura do back-end por pacote (`br.com.obrix.*`):
 
 | Pacote | Instruções | Linhas | Ramos |
 |---|---|---|---|
-| `solicitacao` | 96,0% | 98,7% | 88,2% |
+| `solicitacao` | 96,2% | 98,8% | 89,1% |
 | `cobranca` | 100,0% | 100,0% | — (sem desvios) |
 | `seguranca` | 96,6% | 98,4% | 83,3% |
 | `usuario` | 89,7% | 92,2% | 65,4% |
@@ -130,8 +130,8 @@ Cobertura do back-end por pacote (`br.com.obrix.*`):
 | `catalogo` | 92,1% | 100,0% | 50,0% |
 | `avaliacao` | 83,3% | 87,5% | 50,0% |
 | `notificacao` | 54,1% | 59,1% | — |
-| `config` | 17,5% | 16,1% | 0,0% |
-| **Geral** | **85,2%** | **88,0%** | **78,1%** |
+| `config` | 17,4% | 16,1% | 0,0% |
+| **Geral** | **85,4%** | **88,3%** | **79,0%** |
 
 O pacote `config` fica baixo porque `DadosDeDemonstracao` só roda nos perfis `dev` e
 `demo`, fora dos testes.
@@ -212,21 +212,51 @@ SOLICITADA ──► ACEITA ──┼──► EM_EXECUCAO ──► AGUARDANDO_
 
 As regras que o código garante:
 
-1. **A cobrança nasce em um único ponto:** `SolicitacaoService.confirmar`. Nenhum outro
-   evento cria uma `Cobranca`.
+1. **A cobrança nasce em um único ponto:** `SolicitacaoService.concluir`, chamado pela
+   confirmação do cliente e pela confirmação automática. Nenhum outro evento cria uma
+   `Cobranca`.
 2. **Somente o cliente confirma.** O profissional registra que executou e informa o
    valor final; isso não fecha o ciclo financeiro.
-3. **Se o cliente não responde em 7 dias**, o sistema confirma sozinho — e grava que a
-   confirmação foi automática, com autor `SISTEMA` no histórico.
-4. **Contestar desliga esse prazo para sempre** naquele serviço. O atributo derivado
+3. **Ao confirmar, o cliente informa o valor que pagou.** Como é o profissional quem paga
+   a comissão, o valor declarado só por ele abriria espaço para subdeclaração. Por isso
+   `POST /solicitacoes/{id}/confirmar` recebe `{"valorPago": ...}`, obrigatório e maior
+   que zero:
+   - **valor igual** ao registrado pelo profissional (280 e 280,00 contam como iguais):
+     o serviço é concluído, o valor do cliente fica gravado em `valorConfirmadoCliente` e
+     a cobrança é gerada;
+   - **valor diferente:** o serviço vai para `CONTESTADA`, com autor `CLIENTE` e o motivo
+     automático *"Divergencia de valor: o cliente informou R$ X e o profissional
+     registrou R$ Y"*. Nenhuma cobrança é gerada, o profissional é notificado e precisa
+     registrar a conclusão de novo.
+
+   No painel, o campo "Quanto você pagou pelo serviço?" começa vazio, para o cliente
+   informar o valor sem copiar o do profissional.
+4. **Se o cliente não responde em 7 dias**, o sistema confirma sozinho com o valor final
+   do profissional — e grava que a confirmação foi automática, com autor `SISTEMA` no
+   histórico e `valorConfirmadoCliente` nulo.
+5. **Contestar desliga esse prazo para sempre** naquele serviço. O atributo derivado
    `foiContestada` é calculado a partir do histórico, não guardado.
-5. **A única saída de uma contestação** é um novo registro de conclusão, que devolve o
-   serviço para `AGUARDANDO_CONFIRMACAO`.
-6. **Uma solicitação gera no máximo uma cobrança** — garantido por restrição de unicidade
+6. **A única saída de uma contestação** (manual ou por divergência de valor) é um novo
+   registro de conclusão, que devolve o serviço para `AGUARDANDO_CONFIRMACAO`.
+7. **Uma solicitação gera no máximo uma cobrança** — garantido por restrição de unicidade
    no banco, não apenas por verificação no código.
-7. **Toda transição grava motivo e autor** no `HistoricoStatus`. Recusar, cancelar e
+8. **Toda transição grava motivo e autor** no `HistoricoStatus`. Recusar, cancelar e
    contestar exigem motivo.
-8. **Transição proibida falha explicitamente**, nunca deixa estado inconsistente.
+9. **Transição proibida falha explicitamente**, nunca deixa estado inconsistente.
+
+---
+
+## Riscos do modelo de negócio
+
+Como a receita vem de uma comissão paga pelo profissional e calculada sobre o valor do
+serviço, o modelo tem riscos próprios. Os três principais e como o sistema lida com cada
+um:
+
+| Risco | O que é | Situação |
+|---|---|---|
+| **Subdeclaração do valor** | O profissional registra um valor menor do que recebeu para pagar menos comissão. | **Mitigado.** O cliente informa o valor que pagou ao confirmar. Se diferir do valor registrado, o serviço volta contestado para o profissional e nenhuma comissão é cobrada até os dois valores baterem. |
+| **Reputação inflada** | Avaliações sobre serviços que não aconteceram, ou que ninguém confirmou. | **Mitigado (já existente).** A avaliação só é liberada em `CONCLUIDA`, só pelo cliente e uma por serviço. A nota do profissional conta apenas serviços confirmados. |
+| **Desintermediação** | Depois do aceite, os contatos são liberados e cliente e profissional podem fechar os próximos serviços fora da plataforma, sem comissão. | **Não resolvido.** Mitigação futura: pagamento intermediado pela plataforma, em que o valor passa pelo Obrix e a comissão é retida no repasse. Hoje o pagamento real está fora do escopo. |
 
 ---
 
@@ -315,4 +345,4 @@ Anotados aqui porque são reais, e não para serem descobertos depois:
 ## Stack
 
 Java 21 · Spring Boot 3.3 · Spring Data JPA · Flyway · H2 (desenvolvimento) ·
-PostgreSQL 17 (produção) · HTML5, CSS3 e JavaScript sem framework · Maven
+PostgreSQL 18 (produção) · HTML5, CSS3 e JavaScript sem framework · Maven
