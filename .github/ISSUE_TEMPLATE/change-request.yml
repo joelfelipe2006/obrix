@@ -1,0 +1,146 @@
+name: Change Request
+description: Registro de uma solicitação de mudança (CR) para avaliação do CCB.
+title: "CR-XXX: "
+labels: ["change-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Preencha um formulário por mudança. O processo completo está em `docs/mcs/processo.md`.
+        Depois da decisão do CCB, registre o CR também em `docs/mcs/change-requests.md`.
+
+  - type: input
+    id: identificador
+    attributes:
+      label: Identificador
+      description: Próximo número livre do registro geral (docs/mcs/change-requests.md).
+      placeholder: CR-014
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo
+      options:
+        - Corretiva (corrige um defeito)
+        - Adaptativa (adapta a um novo ambiente ou exigência externa)
+        - Evolutiva (nova funcionalidade ou melhoria)
+        - Preventiva (reduz risco futuro, como testes, qualidade e processo)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: prioridade
+    attributes:
+      label: Prioridade
+      options:
+        - Alta
+        - Média
+        - Baixa
+    validations:
+      required: true
+
+  - type: input
+    id: solicitante
+    attributes:
+      label: Solicitante
+      description: Quem pediu a mudança (membro da equipe, professor, revisão do artigo...).
+    validations:
+      required: true
+
+  - type: textarea
+    id: descricao
+    attributes:
+      label: Descrição
+      description: O que deve mudar.
+    validations:
+      required: true
+
+  - type: textarea
+    id: justificativa
+    attributes:
+      label: Justificativa
+      description: Por que a mudança é necessária e o que acontece se não for feita.
+    validations:
+      required: true
+
+  - type: textarea
+    id: itens-configuracao
+    attributes:
+      label: Itens de configuração afetados
+      description: Identificadores e caminhos, conforme docs/mcs/itens-de-configuracao.md.
+      placeholder: |
+        - IC-10 solicitacao (src/main/java/br/com/obrix/solicitacao)
+        - IC-14 front-end estático (src/main/resources/static)
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "## Análise de impacto"
+
+  - type: textarea
+    id: impacto-modulos
+    attributes:
+      label: Módulos afetados
+    validations:
+      required: true
+
+  - type: textarea
+    id: impacto-riscos
+    attributes:
+      label: Riscos
+      description: O que pode quebrar e como mitigar.
+    validations:
+      required: true
+
+  - type: input
+    id: impacto-esforco
+    attributes:
+      label: Esforço estimado
+      placeholder: "Ex.: 4 horas, 1 dia"
+    validations:
+      required: true
+
+  - type: textarea
+    id: impacto-testes
+    attributes:
+      label: Testes necessários
+      description: Testes novos e regressão (mvn clean test e node --test).
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Decisão do CCB
+        Preenchido pelo comitê, conforme docs/mcs/ccb.md.
+
+  - type: dropdown
+    id: decisao
+    attributes:
+      label: Decisão do CCB
+      options:
+        - Pendente
+        - Aprovada
+        - Rejeitada
+        - Adiada
+    validations:
+      required: false
+
+  - type: input
+    id: data-decisao
+    attributes:
+      label: Data da decisão
+      placeholder: DD/MM/AAAA
+    validations:
+      required: false
+
+  - type: input
+    id: membros
+    attributes:
+      label: Membros presentes e votos
+      placeholder: "Ex.: Joel (aprova), Gabriel (aprova), Luiz (adia)"
+    validations:
+      required: false
