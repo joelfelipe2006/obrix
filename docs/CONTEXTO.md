@@ -59,11 +59,26 @@ Garantias que o código oferece:
    - **Igual:** grava `valor_confirmado_cliente` e segue para `concluir`, que gera a
      cobrança sobre o `valorFinal`.
    - **Diferente:** a solicitação vai para `CONTESTADA` pela transição normal, com autor
-     `CLIENTE` e motivo automático `Divergencia de valor: o cliente informou R$ X e o
-     profissional registrou R$ Y`. Nenhuma cobrança é gerada e o prestador é notificado.
-     Como toda contestação, desliga a confirmação automática; a saída é o prestador
-     registrar a conclusão de novo.
+     `CLIENTE` e motivo automático `Divergencia de valor: o valor informado pelo cliente
+     (R$ X) nao confere com o registrado pelo profissional.` Nenhuma cobrança é gerada e
+     o prestador é notificado. Como toda contestação, desliga a confirmação automática; a
+     saída é o prestador registrar a conclusão de novo.
    - Fora de `AGUARDANDO_CONFIRMACAO`, responde `TRANSICAO_INVALIDA`.
+
+   **Confirmação às cegas.** A checagem só vale se o cliente não puder copiar o número do
+   prestador. Por isso:
+   - `SolicitacaoMapper.paraResposta` devolve `valorFinal` e `valorConfirmadoCliente`
+     nulos quando quem vê é o cliente e a solicitação não está `CONCLUIDA`. Vale para
+     `GET /solicitacoes`, `GET /solicitacoes/{id}` e para as respostas das ações. O
+     prestador sempre vê o próprio `valorFinal`. Depois de `CONCLUIDA`, o cliente vê os
+     dois valores.
+   - O motivo da divergência fica no histórico que o cliente lê, então mostra só o valor
+     do cliente. Senão, errar de propósito revelaria o valor do prestador.
+   - No painel do cliente, o cartão em `AGUARDANDO_CONFIRMACAO` e `CONTESTADA` mostra
+     "Valor: você informa ao confirmar", e o modal de confirmação não mostra o valor do
+     profissional nem a comissão em reais (que o revelaria por conta simples). O
+     `demo.js` segue a mesma regra, e `Api.motivoDivergencia` gera o mesmo texto do
+     back-end.
 4. **Confirmação automática.** Se o cliente não responde em 7 dias
    (`obrix.confirmacao.prazo-dias`), a tarefa agendada confirma. Fica gravado
    `confirmacao_automatica = true` e o autor `SISTEMA` no histórico. A cobrança usa o
@@ -81,6 +96,14 @@ Garantias que o código oferece:
    (`Cobranca.calcularComissao`). Exemplo de referência: 10% de R$ 280,00 = R$ 28,00.
 
 O percentual vem de `obrix.comissao.percentual` (`10.00`) em `application.yml`.
+
+### Riscos do modelo de negócio
+
+| Risco | Situação |
+|---|---|
+| **Subdeclaração do valor** (o prestador registra menos do que recebeu para pagar menos comissão) | **Mitigado** pela confirmação com o valor pago, feita às cegas: até a conclusão o cliente não vê o valor do prestador, nem na API nem no motivo de uma divergência. Valor diferente vira `CONTESTADA`, sem cobrança. Limite: se cliente e prestador combinarem o valor por fora, a checagem não detecta. |
+| **Reputação inflada** | **Mitigado.** Avaliação só em `CONCLUIDA`, só pelo cliente, uma por solicitação. |
+| **Desintermediação** (as partes fecham os próximos serviços fora da plataforma) | **Não resolvido.** Depende de pagamento intermediado, hoje fora do escopo. |
 
 ---
 
@@ -143,6 +166,8 @@ Observações:
   sobrescrever a outra.
 - **Contato:** telefone e e-mail das partes só aparecem a partir de `ACEITA`
   (`contatoLiberado()`), e nunca em `RECUSADA` ou `CANCELADA`.
+- **Valor às cegas:** para o cliente, `valorFinal` só aparece em `CONCLUIDA`; o
+  prestador sempre vê o próprio valor (ver regra 3 da seção 2).
 - **Ações disponíveis:** a resposta da API traz `acoesDisponiveis`, calculado em
   `SolicitacaoMapper.acoes`. O front-end só mostra os botões dessa lista e não recalcula
   a regra.
@@ -386,9 +411,11 @@ mvn test
 node --test src/test/js/*.test.js   # front-end, sem dependências
 ```
 
-São **152 testes no back-end** (JUnit 5 + AssertJ), entre unidade e integração, e
-**21 no front-end**. O `mvn test` também gera o relatório de cobertura do JaCoCo em
-`target/site/jacoco/index.html`.
+São **159 testes no back-end** (JUnit 5 + AssertJ), entre unidade e integração, e
+**24 no front-end**. O `mvn test` também gera o relatório de cobertura do JaCoCo em
+`target/site/jacoco/index.html`. Na última medição (25/11/2026), a cobertura do back-end
+foi de 88,3% das linhas (864/979), 85,4% das instruções e 79,7% dos ramos; o pacote
+`solicitacao` ficou em 98,8% das linhas.
 
 **Unidade** (`solicitacao/`, sem contexto Spring e sem banco):
 
@@ -396,6 +423,7 @@ São **152 testes no back-end** (JUnit 5 + AssertJ), entre unidade e integraçã
 |---|---|---|
 | `CicloDaSolicitacaoTest` | 25 | Máquina de estados (caminho normal, histórico com autor e motivo, transições proibidas, estado final imóvel, cancelamento, motivo obrigatório, valor positivo); contestação; confirmação automática e o prazo de 7 dias; contato só após o aceite; cálculo da comissão (R$ 280,00 → R$ 28,00, `HALF_UP`, escala 2, percentual gravado) |
 | `ConfirmacaoComValorTest` | 6 | `informarValorPago`: valor igual libera a confirmação; 280 = 280.00; valor diferente contesta com autor `CLIENTE` e motivo automático; o prazo automático deixa de correr; valor inválido e status errado |
+| `ConfirmacaoCegaTest` | 1 | O motivo da divergência traz o valor do cliente e não o do prestador |
 
 **Integração** (`api/`, `@SpringBootTest` + MockMvc + H2 com as migrations do Flyway;
 o login passa por `POST /auth/login` de verdade):
@@ -404,6 +432,7 @@ o login passa por `POST /auth/login` de verdade):
 |---|---|---|
 | `CicloApiTest` | 24 | Ciclo completo pela API, cobrança gerada só na confirmação, cobrança única, avaliação, extrato e confirmação automática pela tarefa agendada |
 | `ConfirmacaoComValorApiTest` | 10 | Valor igual: `CONCLUIDA` com cobrança; 280 = 280.00; valor diferente: `CONTESTADA` sem cobrança, motivo no histórico e prestador notificado; revisão e nova confirmação; sem `valorPago` ou ≤ 0: 400; confirmação automática com `valorConfirmadoCliente` nulo |
+| `ConfirmacaoCegaApiTest` | 6 | Confirmação às cegas: cliente não vê `valorFinal` em `AGUARDANDO_CONFIRMACAO` (detalhe, lista e resposta da ação); prestador vê; motivo da divergência sem o valor do prestador; depois de `CONCLUIDA` o cliente vê `valorFinal` e `valorConfirmadoCliente` |
 | `ErrosApiTest` | 35 | 401 sem login, 403 por perfil e por dono, 404, 422 `TRANSICAO_INVALIDA`, 400 de validação e o formato do `ApiError` |
 | `AutenticacaoApiTest` | 17 | Cadastro, login, sessão e bloqueio após tentativas erradas |
 | `ContaApiTest` | 16 | Minha conta: perfil, senha, desativar e excluir |
@@ -417,7 +446,8 @@ o login passa por `POST /auth/login` de verdade):
 **Front-end** (`src/test/js`, `node:test`, sem dependências): os scripts reais de
 `static/js` rodam num contexto isolado do Node (`ambiente.js`), com `fetch` simulado.
 Cobrem a escolha entre API e demonstração, o formato de página, o "carregar mais", o
-cálculo da comissão, a conta e a regra do valor pago no `demo.js`.
+cálculo da comissão, a conta, a regra do valor pago e a confirmação às cegas no
+`demo.js`.
 
 Para testar manualmente, suba em `dev`, entre como cliente e como prestador em
 navegadores diferentes (ou em janela anônima) e confira as tabelas `cobranca` e
@@ -442,6 +472,8 @@ português descrevendo a regra.
 - Geração da cobrança na confirmação, com unicidade garantida no banco.
 - Confirmação com o valor pago pelo cliente: valor diferente do registrado pelo prestador
   vira contestação automática, sem cobrança (contra a subdeclaração).
+- Confirmação às cegas: o cliente só vê o valor do prestador depois de `CONCLUIDA`, e o
+  motivo da divergência não revela esse valor.
 - Confirmação automática em 7 dias, desligada por contestação.
 - Avaliação após a conclusão, com recálculo da nota média.
 - Extrato de comissões do prestador.
