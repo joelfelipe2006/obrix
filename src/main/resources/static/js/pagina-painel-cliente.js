@@ -94,15 +94,22 @@
   function cartao(s) {
     var destacar = s.status === 'AGUARDANDO_CONFIRMACAO';
 
+    // Confirmacao as cegas: antes de concluir, o cliente nao ve o valor do
+    // profissional (a API nem o envia). Ele informa quanto pagou ao confirmar.
     var valor = '';
-    if (s.valorFinal !== null && s.valorFinal !== undefined) {
+    if (s.status === 'AGUARDANDO_CONFIRMACAO' || s.status === 'CONTESTADA') {
       valor =
         '<div class="valor-bloco">' +
-          '<div class="valor-rotulo">Valor informado</div>' +
-          '<div class="valor-numero">' + UI.moeda(s.valorFinal) + '</div>' +
+          '<div class="valor-rotulo">Valor: você informa ao confirmar</div>' +
           (s.prazoConfirmacao && destacar
             ? '<div class="prazo">Responda ate ' + UI.escapar(s.prazoConfirmacao) + '</div>'
             : '') +
+        '</div>';
+    } else if (s.status === 'CONCLUIDA' && s.valorFinal !== null && s.valorFinal !== undefined) {
+      valor =
+        '<div class="valor-bloco">' +
+          '<div class="valor-rotulo">Valor do servico</div>' +
+          '<div class="valor-numero">' + UI.moeda(s.valorFinal) + '</div>' +
         '</div>';
     }
 
@@ -185,10 +192,8 @@
 
   /** A tela que define o produto. Tudo o que acontece ao confirmar fica visivel antes do clique. */
   function abrirConfirmacao(s) {
-    // Previa com a mesma conta do back-end (centavos, HALF_UP): o valor mostrado
-    // aqui e exatamente o que a cobranca vai registrar.
-    var comissao = Api.calcularComissao(s.valorFinal, regras.percentualComissao);
-
+    // Confirmacao as cegas: nada aqui mostra o valor do profissional, nem a
+    // comissao em reais (que o revelaria por conta simples).
     UI.abrirModal({
       titulo: 'Confirmar a conclusao do servico',
       rotuloConfirmar: 'Confirmar conclusao',
@@ -201,9 +206,7 @@
           ' &middot; execucao registrada em ' + UI.escapar(s.dataRegistroConclusao || '—') + '</p>' +
 
         '<div class="aviso aviso-ok" style="margin-top:16px;display:block">' +
-          '<div class="valor-rotulo">Valor final informado pelo profissional</div>' +
-          '<div class="destaque-valor">' + UI.moeda(s.valorFinal) + '</div>' +
-          '<div style="font-size:13.5px;margin-top:4px">Nao confere com o combinado? ' +
+          '<div style="font-size:13.5px">O servico nao saiu como combinado? ' +
             'Use "Contestar" e descreva a divergencia.</div>' +
         '</div>' +
 
@@ -221,9 +224,8 @@
         '<h3 style="margin-top:16px">Ao confirmar com o mesmo valor</h3>' +
         '<ul class="lista-efeitos">' +
           '<li>O servico passa para o status Concluida e voce podera avaliar o profissional.</li>' +
-          '<li>A plataforma registra a comissao de ' + UI.percentual(regras.percentualComissao) +
-            ' ao profissional: <strong>' +
-            UI.moeda(comissao) + '</strong>.</li>' +
+          '<li>A plataforma registra ao profissional a comissao de <strong>' +
+            UI.percentual(regras.percentualComissao) + '</strong> sobre o valor do servico.</li>' +
         '</ul>' +
 
         (s.prazoConfirmacao
@@ -272,8 +274,7 @@
         '<div class="cartao" style="box-shadow:none;margin-top:12px">' +
           '<h3>' + UI.escapar(s.descricao) + '</h3>' +
           '<p class="sub" style="color:var(--texto-2);font-size:14px">' +
-            UI.escapar(s.prestador.nome) + ' &middot; valor informado: ' +
-            UI.moeda(s.valorFinal) + '</p>' +
+            UI.escapar(s.prestador.nome) + ' &middot; ' + UI.escapar(s.categoria) + '</p>' +
         '</div>' +
         '<div class="campo" style="margin-top:16px">' +
           '<label for="motivo-contestacao">Motivo da contestacao — obrigatorio</label>' +

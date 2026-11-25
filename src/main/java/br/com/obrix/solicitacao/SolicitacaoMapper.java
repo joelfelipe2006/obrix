@@ -25,6 +25,10 @@ public class SolicitacaoMapper {
     public SolicitacaoResponse paraResposta(Solicitacao s, Long usuarioQueVe) {
         boolean ehCliente = s.getCliente().getId().equals(usuarioQueVe);
         boolean contato = s.contatoLiberado();
+        // Confirmacao as cegas: o cliente so ve o valor do prestador depois de
+        // concluida. Antes disso ele copiaria o numero ao confirmar, e a checagem
+        // contra a subdeclaracao (informarValorPago) perderia o sentido.
+        boolean valoresVisiveis = !ehCliente || s.getStatus() == StatusSolicitacao.CONCLUIDA;
 
         return new SolicitacaoResponse(
                 s.getId(),
@@ -35,8 +39,8 @@ public class SolicitacaoMapper {
                 rotulo(s.getStatus()),
                 fmt(s.getDataDesejada()),
                 fmt(s.getDataCriacao()),
-                s.getValorFinal(),
-                s.getValorConfirmadoCliente(),
+                valoresVisiveis ? s.getValorFinal() : null,
+                valoresVisiveis ? s.getValorConfirmadoCliente() : null,
                 s.getMotivo(),
                 fmt(s.getDataRegistroConclusao()),
                 fmt(s.getPrazoConfirmacao(prazoDias)),

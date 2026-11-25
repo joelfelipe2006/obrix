@@ -110,28 +110,28 @@ A cobertura do back-end é medida com o JaCoCo, ligado ao `mvn test`. Depois de
 `mvn clean test`, abra `target/site/jacoco/index.html` no navegador para ver o
 relatório por pacote, classe e linha.
 
-Resultados medidos em 23/11/2026:
+Resultados medidos em 25/11/2026:
 
 | Suíte | Casos | Aprovados | Cobertura de linhas |
 |---|---|---|---|
-| Back-end (JUnit 5, `mvn clean test`) | 152 | 152 | 88,3% (864/979) |
-| Front-end (`node --test`) | 21 | 21 | não medida¹ |
-| **Total** | **173** | **173** | — |
+| Back-end (JUnit 5, `mvn clean test`) | 159 | 159 | 88,3% (864/979) |
+| Front-end (`node --test`) | 24 | 24 | não medida¹ |
+| **Total** | **183** | **183** | — |
 
 Cobertura do back-end por pacote (`br.com.obrix.*`):
 
 | Pacote | Instruções | Linhas | Ramos |
 |---|---|---|---|
-| `solicitacao` | 96,2% | 98,8% | 89,1% |
+| `solicitacao` | 96,6% | 98,8% | 89,7% |
 | `cobranca` | 100,0% | 100,0% | — (sem desvios) |
 | `seguranca` | 96,6% | 98,4% | 83,3% |
-| `usuario` | 89,7% | 92,2% | 65,4% |
+| `usuario` | 91,3% | 92,5% | 65,4% |
 | `shared` | 91,0% | 95,0% | — |
-| `catalogo` | 92,1% | 100,0% | 50,0% |
+| `catalogo` | 93,8% | 100,0% | 50,0% |
 | `avaliacao` | 83,3% | 87,5% | 50,0% |
 | `notificacao` | 54,1% | 59,1% | — |
 | `config` | 17,4% | 16,1% | 0,0% |
-| **Geral** | **85,4%** | **88,3%** | **79,0%** |
+| **Geral** | **85,4%** | **88,3%** | **79,7%** |
 
 O pacote `config` fica baixo porque `DadosDeDemonstracao` só roda nos perfis `dev` e
 `demo`, fora dos testes.
@@ -225,12 +225,20 @@ As regras que o código garante:
      o serviço é concluído, o valor do cliente fica gravado em `valorConfirmadoCliente` e
      a cobrança é gerada;
    - **valor diferente:** o serviço vai para `CONTESTADA`, com autor `CLIENTE` e o motivo
-     automático *"Divergencia de valor: o cliente informou R$ X e o profissional
-     registrou R$ Y"*. Nenhuma cobrança é gerada, o profissional é notificado e precisa
-     registrar a conclusão de novo.
+     automático *"Divergencia de valor: o valor informado pelo cliente (R$ X) nao confere
+     com o registrado pelo profissional."* Nenhuma cobrança é gerada, o profissional é
+     notificado e precisa registrar a conclusão de novo.
 
-   No painel, o campo "Quanto você pagou pelo serviço?" começa vazio, para o cliente
-   informar o valor sem copiar o do profissional.
+   **A confirmação é às cegas:** o cliente não vê o valor registrado pelo profissional
+   antes de informar quanto pagou, senão bastaria copiar o número. Enquanto a
+   solicitação não está `CONCLUIDA`, a API devolve `valorFinal` (e
+   `valorConfirmadoCliente`) nulos para o cliente, em `GET /solicitacoes`,
+   `GET /solicitacoes/{id}` e nas respostas das ações. O motivo da divergência mostra só
+   o valor do cliente, para que errar de propósito não revele o do profissional. O
+   profissional sempre vê o próprio valor. No painel do cliente, o cartão em
+   `AGUARDANDO_CONFIRMACAO` e `CONTESTADA` mostra "Valor: você informa ao confirmar", e o
+   modal de confirmação não traz o valor do profissional nem a comissão em reais. Depois
+   de `CONCLUIDA`, o cliente vê os dois valores.
 4. **Se o cliente não responde em 7 dias**, o sistema confirma sozinho com o valor final
    do profissional — e grava que a confirmação foi automática, com autor `SISTEMA` no
    histórico e `valorConfirmadoCliente` nulo.
@@ -254,7 +262,7 @@ um:
 
 | Risco | O que é | Situação |
 |---|---|---|
-| **Subdeclaração do valor** | O profissional registra um valor menor do que recebeu para pagar menos comissão. | **Mitigado.** O cliente informa o valor que pagou ao confirmar. Se diferir do valor registrado, o serviço volta contestado para o profissional e nenhuma comissão é cobrada até os dois valores baterem. |
+| **Subdeclaração do valor** | O profissional registra um valor menor do que recebeu para pagar menos comissão. | **Mitigado.** O cliente informa o valor que pagou ao confirmar, às cegas: até a conclusão, ele não vê o valor registrado pelo profissional (nem na API, nem no motivo de uma divergência), então não tem como só copiar o número. Se diferir, o serviço volta contestado para o profissional e nenhuma comissão é cobrada até os dois valores baterem. Limite: cliente e profissional podem combinar o valor fora da plataforma; nesse caso a checagem não detecta o conluio. |
 | **Reputação inflada** | Avaliações sobre serviços que não aconteceram, ou que ninguém confirmou. | **Mitigado (já existente).** A avaliação só é liberada em `CONCLUIDA`, só pelo cliente e uma por serviço. A nota do profissional conta apenas serviços confirmados. |
 | **Desintermediação** | Depois do aceite, os contatos são liberados e cliente e profissional podem fechar os próximos serviços fora da plataforma, sem comissão. | **Não resolvido.** Mitigação futura: pagamento intermediado pela plataforma, em que o valor passa pelo Obrix e a comissão é retida no repasse. Hoje o pagamento real está fora do escopo. |
 

@@ -71,8 +71,8 @@ class ConfirmacaoComValorTest {
             HistoricoStatus ultimo = s.getHistorico().get(s.getHistorico().size() - 1);
             assertThat(ultimo.getAutor()).isEqualTo(AutorTransicao.CLIENTE);
             assertThat(ultimo.getMotivo()).isEqualTo(
-                    "Divergencia de valor: o cliente informou R$ 1.500,50"
-                            + " e o profissional registrou R$ 280,00");
+                    "Divergencia de valor: o valor informado pelo cliente (R$ 1.500,50)"
+                            + " nao confere com o registrado pelo profissional.");
         }
 
         @Test
