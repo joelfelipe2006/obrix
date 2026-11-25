@@ -155,10 +155,13 @@
       .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
 
-  /** Motivo da contestacao automatica, identico ao de Solicitacao.informarValorPago. */
-  function motivoDivergencia(valorPago, valorFinal) {
-    return 'Divergencia de valor: o cliente informou ' + reais(valorPago) +
-           ' e o profissional registrou ' + reais(valorFinal);
+  /**
+   * Motivo da contestacao automatica, identico ao de Solicitacao.informarValorPago.
+   * Nao traz o valor do profissional: o cliente le este texto no historico.
+   */
+  function motivoDivergencia(valorPago) {
+    return 'Divergencia de valor: o valor informado pelo cliente (' + reais(valorPago) +
+           ') nao confere com o registrado pelo profissional.';
   }
 
   function parametroPagina(pagina) {

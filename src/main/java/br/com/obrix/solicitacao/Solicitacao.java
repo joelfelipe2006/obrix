@@ -218,8 +218,10 @@ public class Solicitacao {
             this.valorConfirmadoCliente = valorPago;
             return true;
         }
-        contestar("Divergencia de valor: o cliente informou " + reais(valorPago)
-                + " e o profissional registrou " + reais(valorFinal));
+        // O motivo aparece no historico que o cliente ve: nao pode trazer o valor
+        // do prestador, senao bastaria errar de proposito para descobri-lo.
+        contestar("Divergencia de valor: o valor informado pelo cliente (" + reais(valorPago)
+                + ") nao confere com o registrado pelo profissional.");
         return false;
     }
 

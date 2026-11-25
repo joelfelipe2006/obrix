@@ -80,8 +80,8 @@ class ConfirmacaoComValorApiTest extends ApiTestBase {
         void contestaSemCobranca() throws Exception {
             Partes p = new Partes();
             Long id = ateAguardandoConfirmacao(p, "280.00");
-            String motivo = "Divergencia de valor: o cliente informou R$ 300,00"
-                    + " e o profissional registrou R$ 280,00";
+            String motivo = "Divergencia de valor: o valor informado pelo cliente (R$ 300,00)"
+                    + " nao confere com o registrado pelo profissional.";
 
             acao(p.cliente, id, "confirmar", pago("300.00"))
                     .andExpect(status().isOk())
