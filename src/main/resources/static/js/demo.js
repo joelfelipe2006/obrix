@@ -305,6 +305,7 @@
     var cob = e.cobrancas.filter(function (c) { return c.solicitacaoId === s.id; })[0] || null;
     var ava = e.avaliacoes.filter(function (a) { return a.solicitacaoId === s.id; })[0] || null;
     var end = s.enderecoExecucao;
+    var valoresVisiveis = !ehCliente || s.status === 'CONCLUIDA';
 
     return {
       id: s.id,
@@ -315,9 +316,12 @@
       statusRotulo: ROTULOS[s.status],
       dataDesejada: s.dataDesejada,
       dataCriacao: s.dataCriacao,
-      valorFinal: s.valorFinal,
+      // Confirmacao as cegas, como no SolicitacaoMapper: o cliente so ve os
+      // valores depois de concluida.
+      valorFinal: valoresVisiveis ? s.valorFinal : null,
       // Estados salvos antes desta regra nao tem o campo.
-      valorConfirmadoCliente: s.valorConfirmadoCliente == null ? null : s.valorConfirmadoCliente,
+      valorConfirmadoCliente: valoresVisiveis && s.valorConfirmadoCliente != null
+        ? s.valorConfirmadoCliente : null,
       motivo: s.motivo,
       dataRegistroConclusao: s.dataRegistroConclusao,
       prazoConfirmacao: prazoConfirmacao(s),
@@ -612,7 +616,7 @@
                        'Nao e possivel passar de ' + ROTULOS[s.status] + ' para ' + ROTULOS.CONCLUIDA + '.');
           }
           if (!global.Api.mesmoValor(corpo.valorPago, s.valorFinal)) {
-            mover(s, 'CONTESTADA', global.Api.motivoDivergencia(corpo.valorPago, s.valorFinal), 'CLIENTE');
+            mover(s, 'CONTESTADA', global.Api.motivoDivergencia(corpo.valorPago), 'CLIENTE');
             break;
           }
           s.valorConfirmadoCliente = Number(corpo.valorPago);
