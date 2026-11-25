@@ -344,6 +344,28 @@ Anotados aqui porque são reais, e não para serem descobertos depois:
 
 ---
 
+## Gerência de configuração
+
+O processo de gerência de configuração do projeto está em [`docs/mcs/`](docs/mcs/):
+
+- [Processo](docs/mcs/processo.md): fluxo de uma mudança, do Change Request à baseline,
+  política de branches, commits, testes de regressão e auditoria.
+- [CCB](docs/mcs/ccb.md): o comitê de controle de mudanças, papéis, regra de decisão e
+  registro das reuniões.
+- [Itens de configuração](docs/mcs/itens-de-configuracao.md): o que está sob controle,
+  com responsável e forma de versionamento.
+- [Change Requests](docs/mcs/change-requests.md): registro geral, com um arquivo por CR
+  em [`docs/mcs/cr/`](docs/mcs/cr/).
+- [Baselines](docs/mcs/baselines.md): versionamento semântico e as tags `v0.1.0`,
+  `v0.2.0` e `v0.3.0`.
+
+No GitHub, o repositório tem o modelo de issue **Change Request**, o modelo de pull
+request e o workflow **CI de regressão** (`.github/workflows/ci.yml`), que roda
+`mvn -B clean test` e `node --test` em todo pull request e em todo push na `main` e
+publica o relatório do JaCoCo como artifact.
+
+---
+
 ## Equipe
 
 - **Joel Felipe dos Santos** — gerência do projeto e back-end
