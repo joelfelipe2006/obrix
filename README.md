@@ -344,6 +344,24 @@ Anotados aqui porque são reais, e não para serem descobertos depois:
 
 ---
 
+## Interação humano-computador
+
+Os artefatos de IHC estão em [`docs/ihc/`](docs/ihc/), feitos a partir do sistema
+implementado:
+
+- [Análise contextual](docs/ihc/analise-contextual.md) e
+  [proto-personas](docs/ihc/personas.md) do cliente e do prestador;
+- [modelagem de tarefas (HTA)](docs/ihc/modelo-de-tarefas.md) e
+  [projeto de diálogo](docs/ihc/projeto-de-dialogo.md), com o mapa de navegação;
+- [prototipação](docs/ihc/prototipos.md) em baixa, média e alta fidelidade;
+- [avaliação heurística de Nielsen](docs/ihc/heuristicas-nielsen.md) e
+  [auditoria de acessibilidade (WCAG 2.2 AA)](docs/ihc/acessibilidade.md).
+
+Ainda não houve pesquisa com usuários: as personas são hipóteses, e a validação com o
+questionário SUS é a etapa seguinte.
+
+---
+
 ## Equipe
 
 - **Joel Felipe dos Santos** — gerência do projeto e back-end
